@@ -1,0 +1,2 @@
+[console_scripts]
+pyrob = pyrob.cli:main

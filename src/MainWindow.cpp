@@ -2,18 +2,25 @@
 
 #include "SettingsWidget.h"
 #include "HelpWidget.h"
+#include "agent/AgentPanel.h"
+#include "agent/AgentEdit.h"
+#include "sync/LibrarySyncManager.h"
+#include "sync/LibrarySyncServerControl.h"
 #include "CodeEditor.h"
 #include "TitleBar.h"
 #include "WindowFrameOverlay.h"
 #include "AnimatedMenu.h"
 #include "ConsoleWidget.h"
 #include "pyrobeditor/PyrobEditorWidget.h"
+#include "tasks/TurtleTaskWidget.h"
 // SnakeGame.h включаем для корректного вызова деструктора при удалении
 #include "sea/SnakeGame.h"
+#include "extensions/ExtensionManager.h"
 #include <QAction>
 #include <QApplication>
 #include <QCoreApplication>
 #include <QCloseEvent>
+#include <QDebug>
 #include <QScreen>
 #include <QMoveEvent>
 #include <QDockWidget>
@@ -21,14 +28,16 @@
 #include <QFile>
 #include <QFileDialog>
 #include <QDialog>
+#include <QHBoxLayout>
 #include <QFileInfo>
 #include <QMenu>
-#include <QMenuBar>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QProcessEnvironment>
 #include <QSettings>
 #include <QStatusBar>
+#include <QProgressBar>
+#include <QSignalBlocker>
 #include <QTextStream>
 #include <QToolBar>
 #include <QDir>
@@ -74,8 +83,12 @@
 #include <QFile>
 #include <QBuffer>
 #include <QByteArray>
+#include <QDesktopServices>
 #ifdef _WIN32
 #  include <windows.h>
+#  include <shellapi.h>
+#  include <shlobj.h>
+#  include <objbase.h>
 #  include <QToolButton>
 #  include <vector>
 #endif
@@ -166,6 +179,7 @@ MainWindow::MainWindow(const QString &theme, QWidget *parent)
     setupUi();
     setupActions();
     setupConnections();
+    setupExtensions();
     updateRoundedCorners();
     updateBorderStyle();
     
@@ -174,6 +188,11 @@ MainWindow::MainWindow(const QString &theme, QWidget *parent)
     
     // Восстанавливаем состояние окна (включая положение тулбара)
     restoreWindowState();
+
+    // После restoreState снова закрепляем правый угол за агентом:
+    // нижняя панель не должна заходить под агента.
+    setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+    setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
     
     // Инициализируем таймер для debounce обновления автодополнения
     m_completionUpdateTimer = new QTimer(this);
@@ -194,6 +213,7 @@ MainWindow::MainWindow(const QString &theme, QWidget *parent)
     
     // Создаем локальный сервер для единого экземпляра приложения
     setupLocalServer();
+    setupLibrarySync();
 }
 
 void MainWindow::setupUi() {
@@ -202,7 +222,7 @@ void MainWindow::setupUi() {
     // Отключаем нативный заголовок
     setWindowFlags(Qt::FramelessWindowHint | Qt::Window);
 
-    m_menuBar = new QMenuBar(this);
+    m_menuBar = new HoverActivatedMenuBar(this);
     m_menuBar->setNativeMenuBar(false);
     m_titleBar = new TitleBar(this, m_menuBar, this);
     setMenuWidget(m_titleBar);
@@ -303,11 +323,29 @@ void MainWindow::setupUi() {
     m_outputDock->setWidget(m_outputStack);
     addDockWidget(Qt::BottomDockWidgetArea, m_outputDock);
 
+    // Правый dock (Агент) занимает угол снизу справа — на всю высоту до статус-бара;
+    // нижний dock (Вывод/Консоль) тогда идёт только до панели агента.
+    setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+    setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
+
     // REPL и Проект создаются по требованию
     m_replDock = nullptr;
     m_projectDock = nullptr;
 
     statusBar()->showMessage(tr("Готов"));
+
+    m_syncProgressLabel = new QLabel(this);
+    m_syncProgressLabel->setVisible(false);
+    m_syncProgressBar = new QProgressBar(this);
+    m_syncProgressBar->setVisible(false);
+    m_syncProgressBar->setMinimumWidth(160);
+    m_syncProgressBar->setMaximumWidth(220);
+    m_syncProgressBar->setTextVisible(true);
+    statusBar()->addPermanentWidget(m_syncProgressLabel);
+    statusBar()->addPermanentWidget(m_syncProgressBar);
+    m_syncCountdownLabel = new QLabel(this);
+    m_syncCountdownLabel->setVisible(false);
+    statusBar()->addPermanentWidget(m_syncCountdownLabel);
 
     // Overlay border (on top of all children)
     m_frameOverlay = new WindowFrameOverlay(this);
@@ -320,6 +358,7 @@ void MainWindow::setupUi() {
 
 void MainWindow::setupActions() {
     auto *fileMenu = new AnimatedMenu(tr("Файл"), this);
+    connect(fileMenu, &QMenu::aboutToHide, this, [this]() { if (m_menuBar) m_menuBar->deactivate(); });
     m_menuBar->addMenu(fileMenu);
     m_actNew = fileMenu->addAction(tr("Новый"));
     fileMenu->addAction(tr("Новое решение pyrob"), this, &MainWindow::newPyrobSolution);
@@ -332,11 +371,14 @@ void MainWindow::setupActions() {
     auto *actExit = fileMenu->addAction(tr("Выход"));
 
     auto *runMenu = new AnimatedMenu(tr("Запуск"), this);
+    connect(runMenu, &QMenu::aboutToHide, this, [this]() { if (m_menuBar) m_menuBar->deactivate(); });
     m_menuBar->addMenu(runMenu);
     m_actRun = runMenu->addAction(tr("Запустить скрипт"));
 
     auto *toolsMenu = new AnimatedMenu(tr("Инструменты"), this);
+    connect(toolsMenu, &QMenu::aboutToHide, this, [this]() { if (m_menuBar) m_menuBar->deactivate(); });
     m_menuBar->addMenu(toolsMenu);
+    m_toolsMenu = toolsMenu;
     auto *actChoosePy = toolsMenu->addAction(tr("Выбрать Python..."));
     toolsMenu->addSeparator();
     auto *actToggleRepl = toolsMenu->addAction(tr("REPL"));
@@ -349,14 +391,33 @@ void MainWindow::setupActions() {
     actToggleTheme->setCheckable(true);
     actToggleTheme->setChecked(false);
 
+    auto *tasksMenu = new AnimatedMenu(tr("Задачи"), this);
+    connect(tasksMenu, &QMenu::aboutToHide, this, [this]() { if (m_menuBar) m_menuBar->deactivate(); });
+    m_menuBar->addMenu(tasksMenu);
+    auto *actTurtleWorkbook = tasksMenu->addAction(tr("Задачник черепаха"));
+
     auto *helpMenu = new AnimatedMenu(tr("Помощь"), this);
+    connect(helpMenu, &QMenu::aboutToHide, this, [this]() { if (m_menuBar) m_menuBar->deactivate(); });
     m_menuBar->addMenu(helpMenu);
     auto *actHelp = helpMenu->addAction(tr("Справка"));
+    m_actPythonDocs = helpMenu->addAction(tr("Документация Python"));
+    m_actTextbook = helpMenu->addAction(tr("Учебник 6 класс"));
+    m_actTextbook7 = helpMenu->addAction(tr("Учебник 7 класс"));
+    helpMenu->addSeparator();
+    auto *actAbout = helpMenu->addAction(tr("О программе"));
+
+    m_actToggleAgent = new QAction(tr("Агент"), this);
+    m_actToggleAgent->setCheckable(true);
+    m_actToggleAgent->setChecked(false);
+    m_menuBar->addAction(m_actToggleAgent);
+    connect(m_actToggleAgent, &QAction::triggered, this, &MainWindow::toggleAgentPanel);
 
     // Toolbar
     m_toolBar = addToolBar(tr("Основное"));
     m_toolBar->setObjectName("MainToolBar");
     m_toolBar->setMovable(true); // Разрешаем перетаскивание тулбара
+    // Разрешаем размещение только сверху, слева и справа (запрещаем снизу)
+    m_toolBar->setAllowedAreas(Qt::TopToolBarArea | Qt::LeftToolBarArea | Qt::RightToolBarArea);
     // Иконки из ресурсов - используем light-theme, но перекрашиваем в зависимости от темы
     QString iconBasePath = ":/icons/icons/light-theme/";
     QString iconColor = (m_currentTheme == "dark") ? "#e0e0e0" : "#000000";
@@ -393,7 +454,7 @@ void MainWindow::setupActions() {
     m_toolBar->addAction(m_actDebug);
     m_actDebugNext = new QAction(createIconFromResource(iconBasePath + "next-bug.svg", iconColor), tr("Следующий шаг отладки"), this);
     m_toolBar->addAction(m_actDebugNext);
-    m_actRunInTerminal = new QAction(createIconFromResource(iconBasePath + "run-in-terminal.svg", iconColor), tr("Запуск в отдельном окне консоли"), this);
+    m_actRunInTerminal = new QAction(createIconFromResource(iconBasePath + "run-in-terminal.svg", iconColor), tr("Запуск в системном браузере"), this);
     m_toolBar->addAction(m_actRunInTerminal);
 
     // Shortcuts
@@ -417,6 +478,60 @@ void MainWindow::setupActions() {
     connect(actToggleRepl, &QAction::toggled, this, &MainWindow::toggleRepl);
     connect(actToggleTheme, &QAction::triggered, this, &MainWindow::toggleTheme);
     connect(actHelp, &QAction::triggered, this, &MainWindow::openHelp);
+    connect(m_actPythonDocs, &QAction::triggered, this, &MainWindow::openPythonDocumentation);
+    connect(m_actTextbook, &QAction::triggered, this, &MainWindow::openTextbook);
+    connect(m_actTextbook7, &QAction::triggered, this, &MainWindow::openTextbook7);
+    connect(actAbout, &QAction::triggered, this, [this]() {
+        QDialog dialog(this);
+        dialog.setWindowTitle(tr("О программе Vuzhyk"));
+        dialog.setModal(true);
+
+        auto *dialogLayout = new QVBoxLayout(&dialog);
+        auto *contentLayout = new QHBoxLayout();
+        contentLayout->setSpacing(20);
+
+        auto *iconLabel = new QLabel(&dialog);
+        iconLabel->setPixmap(QApplication::windowIcon().pixmap(96, 96));
+        iconLabel->setAlignment(Qt::AlignTop | Qt::AlignHCenter);
+        iconLabel->setMinimumWidth(112);
+        contentLayout->addWidget(iconLabel);
+
+        auto *infoLayout = new QVBoxLayout();
+        auto *nameLabel = new QLabel(QStringLiteral("<b>Vuzhyk</b>"), &dialog);
+        nameLabel->setTextFormat(Qt::RichText);
+        infoLayout->addWidget(nameLabel);
+
+        auto *authorLabel = new QLabel(tr("Автор: Корнеев Павел"), &dialog);
+        authorLabel->setToolTip(tr("В IDE есть пасхалка — можете попробовать её найти."));
+        infoLayout->addWidget(authorLabel);
+
+        auto addLink = [&dialog, infoLayout](const QString &text, const QString &url) {
+            auto *linkLabel = new QLabel(
+                QStringLiteral("<a href=\"%1\">%2</a>").arg(url, text), &dialog);
+            linkLabel->setTextFormat(Qt::RichText);
+            linkLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
+            linkLabel->setOpenExternalLinks(true);
+            infoLayout->addWidget(linkLabel);
+        };
+        addLink(tr("GitHub проекта"), QStringLiteral("https://github.com/p4ulroot/Vuzhyk"));
+        addLink(tr("Сайт проекта"), QStringLiteral("https://vuzhyk.by/"));
+        addLink(tr("Лицензия: GNU General Public License v3.0 (GPL-3.0)"),
+                QStringLiteral("https://www.gnu.org/licenses/gpl-3.0.html"));
+
+        contentLayout->addLayout(infoLayout, 1);
+        dialogLayout->addLayout(contentLayout);
+
+        auto *closeButton = new QPushButton(tr("Закрыть"), &dialog);
+        connect(closeButton, &QPushButton::clicked, &dialog, &QDialog::accept);
+        auto *buttonLayout = new QHBoxLayout();
+        buttonLayout->addStretch();
+        buttonLayout->addWidget(closeButton);
+        dialogLayout->addLayout(buttonLayout);
+
+        dialog.setMinimumWidth(460);
+        dialog.exec();
+    });
+    connect(actTurtleWorkbook, &QAction::triggered, this, &MainWindow::openTurtleTaskWorkbook);
     connect(actExit, &QAction::triggered, qApp, &QApplication::quit);
     // REPL ввод появится при первом открытии
 
@@ -448,6 +563,87 @@ void MainWindow::setupActions() {
     loadShortcutsFromSettings();
 }
 
+void MainWindow::setupExtensions()
+{
+    m_extensionManager = new ExtensionManager(this);
+    connect(m_extensionManager, &ExtensionManager::extensionsChanged,
+            this, &MainWindow::refreshExtensionActions);
+    m_extensionManager->loadExtensions();
+}
+
+void MainWindow::clearExtensionActions()
+{
+    for (QAction *action : m_extensionActions) {
+        if (!action) {
+            continue;
+        }
+        if (m_toolsMenu) {
+            m_toolsMenu->removeAction(action);
+        }
+        if (m_toolBar) {
+            m_toolBar->removeAction(action);
+        }
+        action->deleteLater();
+    }
+    m_extensionActions.clear();
+}
+
+void MainWindow::refreshExtensionActions()
+{
+    if (!m_extensionManager) {
+        // Если менеджер расширений не инициализирован, скрываем пункт меню учебника
+        return;
+    }
+
+    clearExtensionActions();
+    for (const ExtensionManager::ExtensionInfo &extension : m_extensionManager->extensions()) {
+        if (!extension.enabled) {
+            continue;
+        }
+        for (const ExtensionManager::ExtensionAction &extensionAction : extension.actions) {
+            ExtensionManager::ExtensionAction action = extensionAction;
+            QAction *menuAction = new QAction(this);
+            menuAction->setText(action.label);
+            if (!action.iconPath.isEmpty()) {
+                menuAction->setIcon(QIcon(action.iconPath));
+            }
+            if (!action.description.isEmpty()) {
+                menuAction->setToolTip(action.description);
+            }
+
+            connect(menuAction, &QAction::triggered, this, [this, action]() {
+                if (m_extensionManager) {
+                    m_extensionManager->executeAction(action);
+                }
+            });
+
+            const QString location = action.location.toLower().trimmed();
+            bool inserted = false;
+            if (location == "toolbar" && m_toolBar) {
+                if (action.separatorBefore) {
+                    m_toolBar->addSeparator();
+                }
+                m_toolBar->addAction(menuAction);
+                inserted = true;
+            }
+
+            if (!inserted && m_toolsMenu) {
+                if (action.separatorBefore) {
+                    m_toolsMenu->addSeparator();
+                }
+                m_toolsMenu->addAction(menuAction);
+                inserted = true;
+            }
+
+            if (inserted) {
+                m_extensionActions.append(menuAction);
+            } else {
+                delete menuAction;
+            }
+        }
+    }
+}
+
 void MainWindow::loadShortcutsFromSettings() {
     QSettings settings;
     settings.beginGroup("shortcuts");
@@ -462,6 +658,8 @@ void MainWindow::loadShortcutsFromSettings() {
         {"run", QKeySequence(Qt::Key_F5)},
         {"runInTerminal", QKeySequence(Qt::Key_F6)},
         {"debug", QKeySequence(Qt::Key_F8)},
+        {"commentLines", QKeySequence(QStringLiteral("Alt+3"))},
+        {"uncommentLines", QKeySequence(QStringLiteral("Alt+Ctrl+3"))},
     };
     
     // Применяем горячие клавиши
@@ -499,6 +697,37 @@ void MainWindow::loadShortcutsFromSettings() {
     }
     
     settings.endGroup();
+    applyEditorShortcuts();
+}
+
+QKeySequence MainWindow::shortcutFromSettings(const QString &name, const QKeySequence &defaultSequence) const
+{
+    QSettings settings;
+    settings.beginGroup("shortcuts");
+    const QString seqStr = settings.value(name, defaultSequence.toString()).toString();
+    settings.endGroup();
+    return QKeySequence(seqStr);
+}
+
+void MainWindow::applyEditorShortcuts()
+{
+    const QKeySequence commentSeq = shortcutFromSettings(
+        QStringLiteral("commentLines"), QKeySequence(QStringLiteral("Alt+3")));
+    const QKeySequence uncommentSeq = shortcutFromSettings(
+        QStringLiteral("uncommentLines"), QKeySequence(QStringLiteral("Alt+Ctrl+3")));
+
+    if (!m_tabWidget) {
+        return;
+    }
+
+    for (int i = 0; i < m_tabWidget->count(); ++i) {
+        CodeEditor *editor = getEditorFromTabWidget(i);
+        if (!editor) {
+            continue;
+        }
+        editor->setCommentShortcut(commentSeq);
+        editor->setUncommentShortcut(uncommentSeq);
+    }
 }
 
 void MainWindow::applyShortcut(const QString &actionName, const QKeySequence &sequence) {
@@ -518,6 +747,8 @@ void MainWindow::applyShortcut(const QString &actionName, const QKeySequence &se
         m_actRunInTerminal->setShortcut(sequence);
     } else if (actionName == "debug" && m_actDebug) {
         m_actDebug->setShortcut(sequence);
+    } else if (actionName == "commentLines" || actionName == "uncommentLines") {
+        applyEditorShortcuts();
     }
 }
 
@@ -827,13 +1058,29 @@ CodeEditor *MainWindow::getEditorFromWidget(QWidget *widget) const {
     CodeEditor *editor = qobject_cast<CodeEditor*>(widget);
     if (editor) return editor;
     
-    // Если виджет - контейнер, ищем редактор среди дочерних виджетов
+    // Обычные вкладки: редактор — прямой ребёнок контейнера
     QList<CodeEditor*> editors = widget->findChildren<CodeEditor*>(QString(), Qt::FindDirectChildrenOnly);
+    if (!editors.isEmpty()) {
+        return editors.first();
+    }
+
+    // Вкладки задач: редактор внутри сплиттера
+    editors = widget->findChildren<CodeEditor*>();
     if (!editors.isEmpty()) {
         return editors.first();
     }
     
     return nullptr;
+}
+
+TurtleTaskWidget *MainWindow::turtleTaskFromWidget(QWidget *widget) const {
+    return qobject_cast<TurtleTaskWidget*>(widget);
+}
+
+TurtleTaskWidget *MainWindow::currentTurtleTask() const {
+    if (!m_tabWidget)
+        return nullptr;
+    return turtleTaskFromWidget(m_tabWidget->currentWidget());
 }
 
 CodeEditor *MainWindow::getEditorFromTabWidget(int index) const {
@@ -1010,6 +1257,11 @@ void MainWindow::setupEditor(CodeEditor *editor) {
     
     // Автодополнение будет обновлено после загрузки содержимого файла (если файл открывается)
     // или при смене вкладки через onTabChanged
+
+    editor->setCommentShortcut(shortcutFromSettings(
+        QStringLiteral("commentLines"), QKeySequence(QStringLiteral("Alt+3"))));
+    editor->setUncommentShortcut(shortcutFromSettings(
+        QStringLiteral("uncommentLines"), QKeySequence(QStringLiteral("Alt+Ctrl+3"))));
 }
 
 void MainWindow::updateTabText(CodeEditor *editor) {
@@ -1029,11 +1281,13 @@ void MainWindow::updateTabText(CodeEditor *editor) {
     
     QString filePath = m_editorToPath.value(editor, QString());
     QString tabText;
-    if (filePath.isEmpty()) {
-        tabText = tr("Новый файл");
+    TurtleTaskWidget *task = turtleTaskFromWidget(m_tabWidget->widget(index));
+    if (!filePath.isEmpty()) {
+        tabText = QFileInfo(filePath).fileName();
+    } else if (task) {
+        tabText = task->tabTitle();
     } else {
-        QFileInfo fi(filePath);
-        tabText = fi.fileName();
+        tabText = tr("Новый файл");
     }
     // Показываем * только если файл изменен (несохранен или изменен после сохранения)
     if (editor->document()->isModified()) {
@@ -1051,17 +1305,207 @@ void MainWindow::updateWindowTitle() {
     
     QString filePath = m_editorToPath.value(editor, QString());
     QString title;
-    if (filePath.isEmpty()) {
-        title = "Vuzhyk - Новый файл";
+    TurtleTaskWidget *task = currentTurtleTask();
+    if (!filePath.isEmpty()) {
+        title = "Vuzhyk - " + QFileInfo(filePath).fileName();
+    } else if (task) {
+        title = "Vuzhyk - " + task->tabTitle();
     } else {
-        QFileInfo fi(filePath);
-        title = "Vuzhyk - " + fi.fileName();
+        title = "Vuzhyk - Новый файл";
     }
     // Показываем * только если файл изменен (несохранен или изменен после сохранения)
     if (editor->document()->isModified()) {
         title += "*";
     }
     setWindowTitle(title);
+}
+
+void MainWindow::refreshFileTypeActions()
+{
+    CodeEditor *editor = currentEditor();
+    QString filePath = editor ? m_editorToPath.value(editor) : QString();
+    bool isHtml = isHtmlFile(filePath);
+    QString fileExt = QFileInfo(filePath).suffix().toLower();
+
+    if (m_actDebug) {
+        m_actDebug->setVisible(!isHtml);
+    }
+    if (m_actDebugNext) {
+        m_actDebugNext->setVisible(!isHtml);
+    }
+
+    // Кнопка Run: текст и видимость по инструкции из расширений (location "run" + fileTypes)
+    if (m_actRun && m_extensionManager) {
+        QVector<const ExtensionManager::ExtensionAction *> runActions = m_extensionManager->runActionsForFileType(fileExt);
+        if (!runActions.isEmpty()) {
+            m_actRun->setText(runActions.first()->label);
+            m_actRun->setVisible(true);
+        } else {
+            m_actRun->setText(tr("Запустить скрипт"));
+            m_actRun->setVisible(true);
+        }
+    } else if (m_actRun) {
+        m_actRun->setText(tr("Запустить скрипт"));
+        m_actRun->setVisible(true);
+    }
+
+    if (m_actTerminate) {
+        m_actTerminate->setVisible(true);
+    }
+
+    if (m_actRunInTerminal) {
+        if (isHtml) {
+            m_actRunInTerminal->setText(tr("Запуск в системном браузере"));
+        } else {
+            m_actRunInTerminal->setText(tr("Запуск в отдельном окне консоли"));
+        }
+        m_actRunInTerminal->setVisible(true);
+    }
+}
+
+bool MainWindow::isHtmlFile(const QString &path) const
+{
+    if (path.isEmpty()) {
+        return false;
+    }
+    QString suffix = QFileInfo(path).suffix().toLower();
+    return suffix == "html" || suffix == "htm" || suffix == "xhtml";
+}
+
+bool MainWindow::openEmbeddedBrowserForFile(const QString &filePath)
+{
+    QString executable;
+    QStringList baseArguments;
+    if (m_extensionManager) {
+        if (const ExtensionManager::ExtensionAction *action =
+                m_extensionManager->findActionById("open-embedded-browser")) {
+            executable = action->executable;
+            baseArguments = action->arguments;
+        }
+    }
+
+    if (executable.isEmpty()) {
+        const QDir appDir(QCoreApplication::applicationDirPath());
+        const QString candidate = appDir.filePath("extensions/EmbeddedBrowserExtension/EmbeddedBrowserExtension.exe");
+        if (QFile::exists(candidate)) {
+            executable = candidate;
+        }
+    }
+
+    if (executable.isEmpty()) {
+        return false;
+    }
+
+    QFileInfo fi(filePath);
+    QString absoluteFilePath = fi.absoluteFilePath();
+    if (absoluteFilePath.isEmpty() || !QFile::exists(absoluteFilePath)) {
+        return false;
+    }
+
+    if (m_embeddedBrowserProcess && m_embeddedBrowserProcess->state() != QProcess::NotRunning) {
+        m_embeddedBrowserProcess->terminate();
+        if (!m_embeddedBrowserProcess->waitForFinished(1000)) {
+            m_embeddedBrowserProcess->kill();
+        }
+        m_embeddedBrowserProcess->deleteLater();
+        m_embeddedBrowserProcess = nullptr;
+    }
+
+    m_embeddedBrowserProcess = new QProcess(this);
+    connect(m_embeddedBrowserProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this](int exitCode, QProcess::ExitStatus status) {
+                if (status != QProcess::NormalExit || exitCode != 0) {
+                    statusBar()->showMessage(tr("Встроенный браузер закрылся (код %1)").arg(exitCode), 5000);
+                }
+                if (m_embeddedBrowserProcess) {
+                    m_embeddedBrowserProcess->deleteLater();
+                    m_embeddedBrowserProcess = nullptr;
+                }
+            });
+    connect(m_embeddedBrowserProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        const QString errMsg = tr("Ошибка запуска встроенного браузера: %1").arg(m_embeddedBrowserProcess ? m_embeddedBrowserProcess->errorString() : tr("неизвестно"));
+        statusBar()->showMessage(errMsg, 5000);
+        qWarning() << "Embedded browser failed to start:" << errMsg;
+    });
+    connect(m_embeddedBrowserProcess, &QProcess::readyReadStandardError, this, [this]() {
+        if (m_embeddedBrowserProcess) {
+            qDebug() << "EmbeddedBrowser stderr:" << m_embeddedBrowserProcess->readAllStandardError();
+        }
+    });
+    connect(m_embeddedBrowserProcess, &QProcess::readyReadStandardOutput, this, [this]() {
+        if (m_embeddedBrowserProcess) {
+            qDebug() << "EmbeddedBrowser stdout:" << m_embeddedBrowserProcess->readAllStandardOutput();
+        }
+    });
+
+    QStringList args = baseArguments;
+    if (!args.contains(absoluteFilePath)) {
+        args.append(absoluteFilePath);
+    }
+
+    m_embeddedBrowserProcess->start(executable, args);
+    return m_embeddedBrowserProcess->state() != QProcess::NotRunning;
+}
+
+bool MainWindow::startExtensionRunProcess(const ExtensionManager::ExtensionAction &action, const QString &absoluteFilePath)
+{
+    if (action.executable.isEmpty() || !QFile::exists(action.executable)) {
+        return false;
+    }
+
+    if (m_embeddedBrowserProcess && m_embeddedBrowserProcess->state() != QProcess::NotRunning) {
+        m_embeddedBrowserProcess->terminate();
+        if (!m_embeddedBrowserProcess->waitForFinished(1000)) {
+            m_embeddedBrowserProcess->kill();
+        }
+        m_embeddedBrowserProcess->deleteLater();
+        m_embeddedBrowserProcess = nullptr;
+    }
+
+    m_embeddedBrowserProcess = new QProcess(this);
+    connect(m_embeddedBrowserProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this](int exitCode, QProcess::ExitStatus status) {
+                if (status != QProcess::NormalExit || exitCode != 0) {
+                    statusBar()->showMessage(tr("Процесс расширения завершился (код %1)").arg(exitCode), 5000);
+                }
+                if (m_embeddedBrowserProcess) {
+                    m_embeddedBrowserProcess->deleteLater();
+                    m_embeddedBrowserProcess = nullptr;
+                }
+            });
+    connect(m_embeddedBrowserProcess, &QProcess::errorOccurred, this, [this](QProcess::ProcessError error) {
+        const QString errMsg = tr("Ошибка запуска: %1").arg(m_embeddedBrowserProcess ? m_embeddedBrowserProcess->errorString() : tr("неизвестно"));
+        statusBar()->showMessage(errMsg, 5000);
+        qWarning() << "Extension run process failed:" << errMsg;
+    });
+
+    QStringList args = action.arguments;
+    if (!args.contains(absoluteFilePath)) {
+        args.append(absoluteFilePath);
+    }
+
+    m_embeddedBrowserProcess->start(action.executable, args);
+    return m_embeddedBrowserProcess->state() != QProcess::NotRunning;
+}
+
+bool MainWindow::openInSystemDefault(const QString &filePath)
+{
+    const QString absolutePath = QFileInfo(filePath).absoluteFilePath();
+    if (absolutePath.isEmpty() || !QFile::exists(absolutePath)) {
+        statusBar()->showMessage(tr("Файл не найден: %1").arg(filePath), 3000);
+        return false;
+    }
+
+    QUrl fileUrl = QUrl::fromLocalFile(absolutePath);
+    bool success = QDesktopServices::openUrl(fileUrl);
+    
+    if (success) {
+        statusBar()->showMessage(tr("HTML открыт в системном браузере"), 3000);
+    } else {
+        statusBar()->showMessage(tr("Не удалось открыть HTML в системном браузере"), 3000);
+    }
+    
+    return success;
 }
 
 void MainWindow::newFile() {
@@ -1100,7 +1544,12 @@ void MainWindow::newFile() {
     
     int index = m_tabWidget->addTab(container, tr("Новый файл"));
     m_editorToPath[newEditor] = QString(); // Пустой путь для нового файла
-    m_tabWidget->setCurrentIndex(index);
+    // Не переключаемся на вкладку сразу при анимации — иначе контент мелькнёт на месте; анимация переключит в конце
+    if (m_isInitializing) {
+        m_tabWidget->setCurrentIndex(index);
+    } else {
+        container->hide(); // Скрываем до старта анимации, чтобы контент не мелькал на месте текущей вкладки
+    }
     
     // Помечаем редактор как начальный файл, если он создан при инициализации
     if (m_isInitializing) {
@@ -1121,6 +1570,61 @@ void MainWindow::newFile() {
     // Обновляем название вкладки и заголовок окна
     updateTabText(newEditor);
     updateWindowTitle();
+    refreshFileTypeActions();
+}
+
+void MainWindow::openTurtleTaskWorkbook()
+{
+    openTurtleTask(turtleTaskForward100());
+}
+
+void MainWindow::openTurtleTask(const TurtleTaskDefinition &task)
+{
+    if (!m_tabWidget)
+        return;
+
+    for (int i = 0; i < m_tabWidget->count(); ++i) {
+        TurtleTaskWidget *existing = turtleTaskFromWidget(m_tabWidget->widget(i));
+        if (existing && existing->taskId() == QLatin1String("turtle_workbook")) {
+            m_tabWidget->setCurrentIndex(i);
+            return;
+        }
+    }
+
+    const int MAX_TABS = 50;
+    int codeEditorCount = 0;
+    for (int i = 0; i < m_tabWidget->count(); ++i) {
+        if (getEditorFromTabWidget(i))
+            ++codeEditorCount;
+    }
+    if (codeEditorCount >= MAX_TABS) {
+        QMessageBox::warning(this, tr("Превышен лимит"),
+            tr("Достигнут максимум %1 открытых вкладок редактора. Закройте некоторые вкладки перед открытием новых.").arg(MAX_TABS));
+        return;
+    }
+
+    auto *widget = new TurtleTaskWidget(task, m_tabWidget);
+    setupEditor(widget->editor());
+    widget->editor()->setFileExtension(QStringLiteral("py"));
+    widget->editor()->setPlainText(task.starterCode);
+    widget->editor()->setModified(false);
+    widget->setTheme(m_currentTheme);
+    widget->setPythonGetter([this]() { return detectPythonExecutable(); });
+    connect(widget, &TurtleTaskWidget::processOutput, this, [this](const QString &text, bool isError) {
+        appendOutput(text, isError);
+    });
+
+    m_editorToPath[widget->editor()] = QString();
+    const int index = m_tabWidget->addTab(widget, task.title);
+    if (m_isInitializing) {
+        m_tabWidget->setCurrentIndex(index);
+    } else {
+        widget->hide();
+        animateTabOpening(widget, index);
+    }
+    updateTabText(widget->editor());
+    updateWindowTitle();
+    refreshFileTypeActions();
 }
 
 void MainWindow::newPyrobSolution() {
@@ -1191,11 +1695,7 @@ void MainWindow::newPyrobSolution() {
 }
 
 QString MainWindow::pythonPath() const {
-    QString path = configuredPythonPath();
-    if (path.isEmpty()) {
-        path = embeddedPythonPath();
-    }
-    return path;
+    return detectPythonExecutable();
 }
 
 QString MainWindow::showFilePicker(const QString &filter, const QString &initialDir, bool isSave, bool isDirectory) {
@@ -1301,7 +1801,7 @@ QString MainWindow::showFilePicker(const QString &filter, const QString &initial
     // Неблокирующее ожидание с обработкой событий UI
     QElapsedTimer timer;
     timer.start();
-    const int timeoutMs = 30000; // Таймаут 30 секунд
+    const int timeoutMs = 300000; // 5 минут — пользователь может долго выбирать файл/папку
     
     // Обрабатываем события, пока процесс не завершится или не истечет таймаут
     while (process.state() == QProcess::Running && timer.elapsed() < timeoutMs) {
@@ -1320,6 +1820,33 @@ QString MainWindow::showFilePicker(const QString &filter, const QString &initial
     QString path = QString::fromUtf8(output).trimmed();
     
     return path;
+}
+
+bool MainWindow::isTempPyrobSolutionPath(const QString &path) const
+{
+    if (path.isEmpty()) {
+        return false;
+    }
+
+    const QFileInfo fi(path);
+    if (!fi.fileName().startsWith(QStringLiteral("pyrob-solution-"), Qt::CaseInsensitive)) {
+        return false;
+    }
+    if (fi.suffix().compare(QStringLiteral("py"), Qt::CaseInsensitive) != 0) {
+        return false;
+    }
+
+    const QString fileDir = fi.absolutePath();
+    const QString tempDir = QDir(QDir::tempPath()).absolutePath();
+    if (!fileDir.compare(tempDir, Qt::CaseInsensitive)) {
+        return true;
+    }
+
+    const QString canonicalFileDir = QDir(fileDir).canonicalPath();
+    const QString canonicalTempDir = QDir(tempDir).canonicalPath();
+    return !canonicalFileDir.isEmpty()
+        && !canonicalTempDir.isEmpty()
+        && !canonicalFileDir.compare(canonicalTempDir, Qt::CaseInsensitive);
 }
 
 QString MainWindow::saveUnsavedToTemp(CodeEditor *editor) {
@@ -1401,7 +1928,7 @@ void MainWindow::saveFile() {
     if (!editor) return;
     
     QString filePath = m_editorToPath.value(editor, QString());
-    if (filePath.isEmpty()) {
+    if (filePath.isEmpty() || isTempPyrobSolutionPath(filePath)) {
         saveFileAs();
         return;
     }
@@ -1463,6 +1990,16 @@ void MainWindow::saveAll() {
 }
 
 void MainWindow::runScript() {
+    if (TurtleTaskWidget *task = currentTurtleTask()) {
+        const QString python = detectPythonExecutable();
+        if (python.isEmpty()) {
+            QMessageBox::critical(this, tr("Python не найден"), tr("Не удалось найти интерпретатор Python."));
+            return;
+        }
+        task->run(python, false);
+        return;
+    }
+
     CodeEditor *editor = currentEditor();
     if (!editor) return;
     
@@ -1491,6 +2028,21 @@ void MainWindow::runScript() {
         updateTabText(editor);
     }
 
+    // Если для типа файла есть действие расширения с location "run" — запускаем процесс (чтобы кнопка «Завершить» могла его закрыть)
+    QString fileExt = QFileInfo(filePath).suffix().toLower();
+    if (m_extensionManager) {
+        QVector<const ExtensionManager::ExtensionAction *> runActions = m_extensionManager->runActionsForFileType(fileExt);
+        if (!runActions.isEmpty()) {
+            QString absolutePath = QFileInfo(filePath).absoluteFilePath();
+            if (startExtensionRunProcess(*runActions.first(), absolutePath)) {
+                statusBar()->showMessage(runActions.first()->label + tr(" — выполнено"), 3000);
+            } else {
+                statusBar()->showMessage(tr("Не удалось запустить: %1").arg(runActions.first()->label), 5000);
+            }
+            return;
+        }
+    }
+
     // Определяем, какой виджет сейчас виден
     bool isConsoleVisible = (m_outputStack && m_outputStack->currentIndex() == 1);
     
@@ -1511,6 +2063,15 @@ void MainWindow::runScript() {
         if (ed) {
             ed->clearErrorHighlight();
         }
+    }
+
+    if (isHtmlFile(filePath)) {
+        if (openInSystemDefault(filePath)) {
+            statusBar()->showMessage(tr("HTML открыт в системном браузере"), 3000);
+        } else {
+            statusBar()->showMessage(tr("Не удалось открыть HTML в системном браузере"), 3000);
+        }
+        return;
     }
 
     const QString python = detectPythonExecutable();
@@ -1586,13 +2147,13 @@ void MainWindow::runScript() {
         
         // Обертываем скрипт в код, который выводит полный traceback для всех ошибок
         QString escapedPath = filePath;
-        escapedPath.replace('\\', "\\\\");
+        // Для raw string r'...' экранируем только одинарные кавычки
         escapedPath.replace('\'', "\\'");
         
         QString wrapperScript = QString(
             "import sys\n"
             "import traceback\n"
-            "import runpy\n"
+            "import os\n"
             "\n"
             "# Устанавливаем excepthook для вывода полного traceback\n"
             "def excepthook(exc_type, exc_value, exc_traceback):\n"
@@ -1602,8 +2163,21 @@ void MainWindow::runScript() {
             "\n"
             "sys.excepthook = excepthook\n"
             "\n"
+            "# Путь к файлу\n"
+            "script_path = r'%1'\n"
+            "\n"
+            "# Устанавливаем __file__ для совместимости\n"
+            "globals_dict = {\n"
+            "    '__name__': '__main__',\n"
+            "    '__file__': script_path,\n"
+            "    '__builtins__': __builtins__,\n"
+            "}\n"
+            "\n"
             "try:\n"
-            "    runpy.run_path(r'%1', run_name='__main__')\n"
+            "    # Читаем и выполняем файл (работает с UNC путями)\n"
+            "    with open(script_path, 'r', encoding='utf-8') as f:\n"
+            "        code = compile(f.read(), script_path, 'exec')\n"
+            "        exec(code, globals_dict)\n"
             "except SystemExit:\n"
             "    raise\n"
             "except Exception as e:\n"
@@ -1615,6 +2189,12 @@ void MainWindow::runScript() {
         m_process->setArguments(QStringList() << "-c" << wrapperScript);
         m_process->setWorkingDirectory(fi.absolutePath());
         m_process->setProcessChannelMode(QProcess::SeparateChannels);
+        
+        // Устанавливаем переменные окружения для корректной работы с кириллицей
+        QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+        env.insert("PYTHONIOENCODING", "utf-8");  // Принудительно UTF-8 для ввода-вывода
+        env.insert("PYTHONUNBUFFERED", "1");      // Отключаем буферизацию
+        m_process->setProcessEnvironment(env);
         
         // Показываем поле ввода когда процесс запущен
         if (m_outputInput && !m_outputModeIsConsole) {
@@ -1652,6 +2232,16 @@ void MainWindow::runScriptInTerminal() {
         f.close();
         editor->document()->setModified(false);
         updateTabText(editor);
+    }
+    
+    // Для HTML файлов открываем в системном браузере
+    if (isHtmlFile(filePath)) {
+        if (openInSystemDefault(filePath)) {
+            statusBar()->showMessage(tr("HTML открыт в системном браузере"), 3000);
+        } else {
+            statusBar()->showMessage(tr("Не удалось открыть HTML в системном браузере"), 3000);
+        }
+        return;
     }
     
     const QString python = detectPythonExecutable();
@@ -1759,9 +2349,28 @@ void MainWindow::runScriptInTerminal() {
 }
 
 void MainWindow::terminateRun() {
+    if (TurtleTaskWidget *task = currentTurtleTask()) {
+        if (task->isRunning()) {
+            task->stop();
+            statusBar()->showMessage(tr("Выполнение остановлено"), 2000);
+            return;
+        }
+    }
+
     // Определяем, какой виджет сейчас виден
     bool isConsoleVisible = (m_outputStack && m_outputStack->currentIndex() == 1);
-    
+
+    if (m_embeddedBrowserProcess && m_embeddedBrowserProcess->state() != QProcess::NotRunning) {
+        m_embeddedBrowserProcess->terminate();
+        if (!m_embeddedBrowserProcess->waitForFinished(1000)) {
+            m_embeddedBrowserProcess->kill();
+        }
+        m_embeddedBrowserProcess->deleteLater();
+        m_embeddedBrowserProcess = nullptr;
+        statusBar()->showMessage(tr("Встроенный браузер закрыт"), 2000);
+        return;
+    }
+
     if (isConsoleVisible && m_console && m_console->isRunning()) {
         m_console->terminate();
         statusBar()->showMessage(tr("Выполнение остановлено"), 2000);
@@ -1830,6 +2439,11 @@ void MainWindow::runScriptWithDebug() {
         return;
     }
     
+    if (isHtmlFile(filePath)) {
+        QMessageBox::information(this, tr("Отладка"), tr("Нельзя отлаживать HTML-файлы."));
+        return;
+    }
+
     // Очищаем подсветку ошибки во всех редакторах
     for (int i = 0; i < m_tabWidget->count(); ++i) {
         CodeEditor *ed = getEditorFromTabWidget(i);
@@ -1877,11 +2491,11 @@ void MainWindow::runScriptWithDebug() {
     
     // Формируем отладочный скрипт
     QString escapedPath = filePath;
-    escapedPath.replace('\\', "\\\\");
+    // Для raw string r'...' экранируем только одинарные кавычки
     escapedPath.replace('\'', "\\'");
     
     QString escapedSyncFile = syncFile;
-    escapedSyncFile.replace('\\', "\\\\");
+    // Для raw string r'...' экранируем только одинарные кавычки
     escapedSyncFile.replace('\'', "\\'");
     
     // Формируем список точек останова для Python
@@ -1894,7 +2508,6 @@ void MainWindow::runScriptWithDebug() {
     QString debugScript = QString(
         "import sys\n"
         "import traceback\n"
-        "import runpy\n"
         "import os\n"
         "import time\n"
         "\n"
@@ -2023,8 +2636,18 @@ void MainWindow::runScriptWithDebug() {
         "sys.excepthook = excepthook\n"
         "sys.settrace(trace_debug)\n"
         "\n"
+        "# Устанавливаем глобальные переменные для исполняемого скрипта\n"
+        "globals_dict = {\n"
+        "    '__name__': '__main__',\n"
+        "    '__file__': current_file,\n"
+        "    '__builtins__': __builtins__,\n"
+        "}\n"
+        "\n"
         "try:\n"
-        "    runpy.run_path(current_file, run_name='__main__')\n"
+        "    # Читаем и выполняем файл (работает с UNC путями)\n"
+        "    with open(current_file, 'r', encoding='utf-8') as f:\n"
+        "        code = compile(f.read(), current_file, 'exec')\n"
+        "        exec(code, globals_dict)\n"
         "except SystemExit:\n"
         "    raise\n"
         "except Exception as e:\n"
@@ -2044,9 +2667,10 @@ void MainWindow::runScriptWithDebug() {
     m_process->setWorkingDirectory(fi.absolutePath());
     m_process->setProcessChannelMode(QProcess::SeparateChannels);
     
-    // Отключаем буферизацию через переменную окружения (на случай, если -u не сработает)
+    // Устанавливаем переменные окружения для корректной работы с кириллицей и отладки
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
-    env.insert("PYTHONUNBUFFERED", "1");
+    env.insert("PYTHONIOENCODING", "utf-8");  // Принудительно UTF-8 для ввода-вывода (исправляет UnicodeEncodeError)
+    env.insert("PYTHONUNBUFFERED", "1");      // Отключаем буферизацию
     m_process->setProcessEnvironment(env);
     
     // Сохраняем путь к файлу синхронизации для continueDebug
@@ -2443,7 +3067,7 @@ bool MainWindow::maybeSave() {
         QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
         QMessageBox::Save);
     if (ret == QMessageBox::Save) {
-        if (filePath.isEmpty()) {
+        if (filePath.isEmpty() || isTempPyrobSolutionPath(filePath)) {
             saveFileAs();
         } else {
             saveToPath(filePath);
@@ -2571,6 +3195,7 @@ void MainWindow::loadFromPath(const QString &path) {
     
     CodeEditor *editor = new CodeEditor(container);
     setupEditor(editor);
+    editor->setFileExtension(fileInfo.suffix());
     editor->setPlainText(text);
     editor->document()->setModified(false);
     layout->addWidget(editor);
@@ -2579,10 +3204,14 @@ void MainWindow::loadFromPath(const QString &path) {
     container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     editor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     
-    QFileInfo fi(normalizedPath);
-    int index = m_tabWidget->addTab(container, fi.fileName());
+    int index = m_tabWidget->addTab(container, fileInfo.fileName());
     m_editorToPath[editor] = normalizedPath;
-    m_tabWidget->setCurrentIndex(index);
+    // Не переключаемся на вкладку сразу при анимации — иначе контент мелькнёт на месте; анимация переключит в конце
+    if (m_isInitializing) {
+        m_tabWidget->setCurrentIndex(index);
+    } else {
+        container->hide(); // Скрываем до старта анимации, чтобы контент не мелькал на месте текущей вкладки
+    }
     
     // Анимируем появление вкладки только если это не инициализация
     if (!m_isInitializing) {
@@ -2604,11 +3233,12 @@ void MainWindow::loadFromPath(const QString &path) {
     
     updateWindowTitle();
     statusBar()->showMessage(tr("Открыто: %1").arg(QDir::toNativeSeparators(normalizedPath)), 3000);
+    refreshFileTypeActions();
 }
 
 QString MainWindow::embeddedPythonPath() const {
     const QString appDir = QCoreApplication::applicationDirPath();
-    const QString candidate = QDir(appDir).filePath("python/python.exe");
+    const QString candidate = QDir(appDir).filePath("Python38/python.exe");
     return QFile::exists(candidate) ? candidate : QString();
 }
 
@@ -2623,45 +3253,48 @@ QString MainWindow::configuredPythonPath() const {
 QString MainWindow::detectPythonExecutable() const {
     QSettings s;
     s.beginGroup(SETTINGS_GROUP);
-    int interpreterType = s.value("interpreterType", 0).toInt(); // 0=встроенный, 1=системный, 2=пользовательский
+    const int type = s.value("interpreterType", 0).toInt(); // 0=встроенный, 1=установленный, 2=системный, 3=пользовательский
+    const QString customPath = s.value(SETTINGS_PYTHON_PATH).toString();
+    const QString selectedInterpreter = s.value("selectedInterpreter").toString();
     s.endGroup();
-    
-    switch (interpreterType) {
-        case 0: // Встроенный в IDE
-        {
-            const QString embedded = embeddedPythonPath();
-            if (!embedded.isEmpty())
-                return embedded;
-            // Если встроенный не найден, используем системный как fallback
-            return QStringLiteral("python.exe");
+
+    if (type == 3) {
+        if (QFile::exists(customPath)) {
+            return customPath;
         }
-        
-        case 1: // Системный
-        {
-            return QStringLiteral("python.exe");
-        }
-        
-        case 2: // Пользовательский путь
-        {
-            const QString configured = configuredPythonPath();
-            if (!configured.isEmpty() && QFile::exists(configured))
-                return configured;
-            // Если путь не найден, используем системный как fallback
-            return QStringLiteral("python.exe");
-        }
-        
-        default:
-            // Старая логика для обратной совместимости
-            const QString configured = configuredPythonPath();
-            if (!configured.isEmpty() && QFile::exists(configured))
-                return configured;
-            
-            const QString embedded = embeddedPythonPath();
-            if (!embedded.isEmpty())
-                return embedded;
-            
-            return QStringLiteral("python.exe");
+        return {};
     }
+
+    if (type == 1) {
+        if (!selectedInterpreter.isEmpty() && QFile::exists(selectedInterpreter)) {
+            return selectedInterpreter;
+        }
+
+        const QString interpretersDir = QDir(QCoreApplication::applicationDirPath()).filePath("interpreters");
+        QDir dir(interpretersDir);
+        if (dir.exists()) {
+            const QStringList subdirs = dir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+            if (!subdirs.isEmpty()) {
+                const QString pythonExe = dir.filePath(subdirs.first() + "/python.exe");
+                if (QFile::exists(pythonExe)) {
+                    return pythonExe;
+                }
+            }
+        }
+    }
+
+    if (type == 0 || type == 1) {
+        const QString embedded = embeddedPythonPath();
+        if (!embedded.isEmpty()) {
+            return embedded;
+        }
+    }
+
+    if (type == 2) {
+        return QStringLiteral("python.exe");
+    }
+
+    return QStringLiteral("python.exe");
 }
 
 void MainWindow::onTabCloseRequested(int index) {
@@ -2709,6 +3342,7 @@ void MainWindow::onTabChanged(int index) {
     
     updateWindowTitle();
     updateCompletionFromDocument();
+    refreshFileTypeActions();
 }
 
 void MainWindow::showTabContextMenu(const QPoint &pos) {
@@ -3253,10 +3887,13 @@ void MainWindow::updateCompletionFromDocument() {
                 // Используем QTimer для отложенного вызова, чтобы убедиться, что лексер полностью инициализирован
                 // Используем QPointer для безопасной проверки, что редактор еще существует
                 QPointer<CodeEditor> editorPtr = editor;
-                QTimer::singleShot(50, this, [editorPtr, pyrobTasks]() {
+                // Объединяем базовые слова (включая pyrob API) и задачи pyrob
+                QStringList allWords = m_cachedBaseCompletions;
+                allWords.append(pyrobTasks);
+                QTimer::singleShot(50, this, [editorPtr, allWords]() {
                     if (editorPtr && editorPtr->lexer()) {
                         try {
-                            editorPtr->updateAPIs(pyrobTasks);
+                            editorPtr->updateAPIs(allWords);
                         } catch (...) {
                             // Игнорируем ошибки при обновлении API
                         }
@@ -3347,17 +3984,20 @@ void MainWindow::updateCompletionFromDocument() {
     m_fileContentHash[editor] = cacheKey;
     
     // Обновляем API лексера для встроенного автокомплита QScintilla
-    // Всегда добавляем задачи pyrob в API
+    // Всегда добавляем базовые слова (включая pyrob API) и задачи pyrob
     if (editor) {
         QsciLexer *lexer = editor->lexer();
         if (lexer) {
             // Используем QTimer для отложенного вызова, чтобы убедиться, что лексер полностью инициализирован
             // Используем QPointer для безопасной проверки, что редактор еще существует
             QPointer<CodeEditor> editorPtr = editor;
-            QTimer::singleShot(50, this, [editorPtr, pyrobTasksForAPI]() {
+            // Объединяем базовые слова (включая pyrob API) и задачи pyrob
+            QStringList allWords = m_cachedBaseCompletions;
+            allWords.append(pyrobTasksForAPI);
+            QTimer::singleShot(50, this, [editorPtr, allWords]() {
                 if (editorPtr && editorPtr->lexer()) {
                     try {
-                        editorPtr->updateAPIs(pyrobTasksForAPI);
+                        editorPtr->updateAPIs(allWords);
                     } catch (...) {
                         // Игнорируем ошибки при обновлении API
                     }
@@ -3445,6 +4085,15 @@ QStringList MainWindow::loadPythonCompletions() {
         "    for item in pyrob_items:\n"
         "        if not item.startswith('_'):\n"
         "            result.append(item)\n"
+        "    # Также добавляем из pyrob.core (для rob.*)\n"
+        "    try:\n"
+        "        import pyrob.core\n"
+        "        core_items = dir(pyrob.core)\n"
+        "        for item in core_items:\n"
+        "            if not item.startswith('_'):\n"
+        "                result.append(item)\n"
+        "    except:\n"
+        "        pass\n"
         "    # Также добавляем task и run_tasks из pyrob\n"
         "    try:\n"
         "        import pyrob\n"
@@ -3455,11 +4104,57 @@ QStringList MainWindow::loadPythonCompletions() {
         "    except:\n"
         "        pass\n"
         "except ImportError:\n"
-        "    # Pyrob не установлен, используем базовый список\n"
+        "    # Pyrob не установлен, используем расширенный базовый список\n"
         "    pyrob_api = ['move_left', 'move_right', 'move_up', 'move_down', 'wall_is_above', 'wall_is_beneath',\n"
         "                 'wall_is_on_the_left', 'wall_is_on_the_right', 'fill_cell', 'cell_is_filled', 'mov',\n"
+        "                 'is_parking_point', 'goto', 'put_wall', 'set_field_size', 'set_cell_type',\n"
+        "                 'set_parking_cell', 'CELL_FILLED', 'CELL_TO_BE_FILLED', 'CELL_EMPTY',\n"
         "                 'task', 'run_tasks']\n"
         "    result.extend(pyrob_api)\n"
+        "\n"
+        "# Turtle API (стандартная библиотека)\n"
+        "try:\n"
+        "    import turtle\n"
+        "    turtle_items = dir(turtle)\n"
+        "    for item in turtle_items:\n"
+        "        if not item.startswith('_'):\n"
+        "            result.append(item)\n"
+        "except ImportError:\n"
+        "    # Turtle не установлен, используем базовый список\n"
+        "    turtle_api = ['forward', 'fd', 'backward', 'back', 'bk', 'right', 'rt', 'left', 'lt',\n"
+        "                  'goto', 'setpos', 'setposition', 'setx', 'sety', 'setheading', 'seth', 'home',\n"
+        "                  'circle', 'dot', 'stamp', 'clearstamp', 'clearstamps', 'undo', 'speed',\n"
+        "                  'position', 'pos', 'towards', 'xcor', 'ycor', 'heading', 'distance',\n"
+        "                  'degrees', 'radians', 'pendown', 'pd', 'down', 'penup', 'pu', 'up',\n"
+        "                  'pensize', 'width', 'pen', 'isdown', 'color', 'pencolor', 'fillcolor',\n"
+        "                  'filling', 'begin_fill', 'end_fill', 'reset', 'clear', 'write',\n"
+        "                  'showturtle', 'st', 'hideturtle', 'ht', 'isvisible', 'shape', 'resizemode',\n"
+        "                  'shapesize', 'turtlesize', 'shearfactor', 'settiltangle', 'tiltangle', 'tilt',\n"
+        "                  'shapetransform', 'get_shapepoly', 'onclick', 'onrelease', 'ondrag',\n"
+        "                  'begin_poly', 'end_poly', 'get_poly', 'clone', 'getturtle', 'getscreen',\n"
+        "                  'setundobuffer', 'undobufferentries', 'tracer', 'window_width', 'window_height',\n"
+        "                  'bgcolor', 'title', 'setup', 'bye', 'exitonclick', 'done', 'mainloop',\n"
+        "                  'mode', 'colormode', 'getcanvas', 'getshapes', 'register_shape', 'addshape',\n"
+        "                  'listen', 'onkey', 'onkeypress', 'onkeyrelease', 'ontimer', 'textinput', 'numinput',\n"
+        "                  'Turtle', 'Screen', 'RawTurtle', 'TurtleScreen', 'ScrolledCanvas', 'Shape', 'Vec2D']\n"
+        "    result.extend(turtle_api)\n"
+        "\n"
+        "# TurtleXY API (сторонняя библиотека)\n"
+        "try:\n"
+        "    import turtlexy\n"
+        "    turtlexy_items = dir(turtlexy)\n"
+        "    for item in turtlexy_items:\n"
+        "        if not item.startswith('_'):\n"
+        "            result.append(item)\n"
+        "except ImportError:\n"
+        "    # TurtleXY не установлен, используем базовый список\n"
+        "    turtlexy_api = ['forward', 'backward', 'left', 'right', 'goto', 'home',\n"
+        "                    'penup', 'pendown', 'pensize', 'color', 'bgcolor',\n"
+        "                    'clear', 'reset', 'write', 'circle', 'dot',\n"
+        "                    'position', 'heading', 'distance', 'towards',\n"
+        "                    'showturtle', 'hideturtle', 'shape', 'speed',\n"
+        "                    'begin_fill', 'end_fill', 'filling', 'done']\n"
+        "    result.extend(turtlexy_api)\n"
         "\n"
         "# Удаляем дубликаты и сортируем\n"
         "result = sorted(set(result))\n"
@@ -3472,6 +4167,11 @@ QStringList MainWindow::loadPythonCompletions() {
     process.setProgram(python);
     process.setArguments(QStringList() << "-c" << script);
     process.setProcessChannelMode(QProcess::SeparateChannels);
+    
+    // Устанавливаем UTF-8 для корректной работы с кириллицей
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("PYTHONIOENCODING", "utf-8");
+    process.setProcessEnvironment(env);
     
     process.start();
     if (!process.waitForFinished(5000)) { // Таймаут 5 секунд
@@ -3526,7 +4226,7 @@ QStringList MainWindow::loadPyrobTasks() {
         "    if not os.path.exists(tasks_dir):\n"
         "        # Пробуем путь относительно executable\n"
         "        app_dir = os.path.dirname(os.path.dirname(python_dir))\n"
-        "        tasks_dir = os.path.join(app_dir, 'python', 'Lib', 'site-packages', 'pyrob', 'tasks')\n"
+        "        tasks_dir = os.path.join(app_dir, 'Python38', 'Lib', 'site-packages', 'pyrob', 'tasks')\n"
         "\n"
         "# Получаем список .py файлов из папки tasks\n"
         "if os.path.exists(tasks_dir):\n"
@@ -3544,6 +4244,11 @@ QStringList MainWindow::loadPyrobTasks() {
     process.setProgram(python);
     process.setArguments(QStringList() << "-c" << script);
     process.setProcessChannelMode(QProcess::SeparateChannels);
+    
+    // Устанавливаем UTF-8 для корректной работы с кириллицей
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert("PYTHONIOENCODING", "utf-8");
+    process.setProcessEnvironment(env);
     
     process.start();
     if (!process.waitForFinished(5000)) { // Таймаут 5 секунд
@@ -3580,6 +4285,11 @@ void MainWindow::setupEditorCompletions(CodeEditor *editor, QStringListModel *ba
 }
 
 bool MainWindow::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == m_agentDock && event->type() == QEvent::Resize) {
+        saveAgentDockWidth();
+        return false;
+    }
+
     // Перехватываем клики по вкладкам для анимации и закрытия
     if (obj == m_tabWidget->tabBar() && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *mouseEvent = static_cast<QMouseEvent*>(event);
@@ -3717,6 +4427,258 @@ void MainWindow::ensureProjectDock() {
     m_projectDock->setWidget(m_fsView);
     addDockWidget(Qt::LeftDockWidgetArea, m_projectDock);
     m_projectDock->hide();
+}
+
+void MainWindow::ensureAgentDock()
+{
+    if (m_agentDock) {
+        return;
+    }
+
+    QSettings settings;
+    m_agentDockWidth = settings.value(QStringLiteral("agent/panelWidth"), 260).toInt();
+
+    m_agentDock = new QDockWidget(tr("Агент"), this);
+    m_agentDock->setObjectName(QStringLiteral("AgentDock"));
+    m_agentDock->setAllowedAreas(Qt::RightDockWidgetArea);
+    m_agentDock->setFeatures(QDockWidget::DockWidgetClosable | QDockWidget::DockWidgetMovable);
+    m_agentDock->installEventFilter(this);
+
+    m_agentPanel = new AgentPanel(m_agentDock);
+    m_agentPanel->setTheme(m_currentTheme);
+    m_agentPanel->setContextProvider([this]() { return agentEditorContext(); });
+    m_agentPanel->setCodeApplier([this](const QString &response, QString *statusMessage) {
+        return applyAgentResponseToEditor(response, statusMessage);
+    });
+    m_agentDock->setWidget(m_agentPanel);
+    m_agentDockWidth = qBound(agentDockMinWidth(), m_agentDockWidth, 800);
+    m_agentDock->setMinimumWidth(agentDockMinWidth());
+
+    // Угол уже назначен RightDock в setupUi; закрепляем агент справа на всю высоту.
+    setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+    setCorner(Qt::TopRightCorner, Qt::RightDockWidgetArea);
+    addDockWidget(Qt::RightDockWidgetArea, m_agentDock);
+    applyAgentDockWidth();
+    m_agentDock->hide();
+
+    connect(m_agentDock, &QDockWidget::visibilityChanged, this, [this](bool visible) {
+        if (m_actToggleAgent) {
+            QSignalBlocker blocker(m_actToggleAgent);
+            m_actToggleAgent->setChecked(visible);
+        }
+        // При закрытии агента нижняя панель снова на всю ширину (поведение Qt по умолчанию).
+        if (!visible) {
+            setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+            return;
+        }
+        QTimer::singleShot(0, this, [this]() { applyAgentDockWidth(); });
+    });
+}
+
+void MainWindow::applyAgentDockWidth()
+{
+    if (!m_agentDock || !m_agentDock->isVisible()) {
+        return;
+    }
+    const int minW = agentDockMinWidth();
+    m_agentDock->setMinimumWidth(minW);
+    const int dockWidth = qBound(minW, m_agentDockWidth, qMax(minW, this->width() - 200));
+    m_applyingAgentDockWidth = true;
+    resizeDocks({m_agentDock}, {dockWidth}, Qt::Horizontal);
+    m_applyingAgentDockWidth = false;
+}
+
+int MainWindow::agentDockMinWidth() const
+{
+    if (m_agentPanel) {
+        return qMax(m_agentPanel->minimumSizeHint().width(), m_agentPanel->minimumWidth());
+    }
+    return 160;
+}
+
+void MainWindow::saveAgentDockWidth()
+{
+    if (!m_agentDock || !m_agentDock->isVisible() || m_applyingAgentDockWidth) {
+        return;
+    }
+    const int width = m_agentDock->width();
+    if (width < agentDockMinWidth()) {
+        return;
+    }
+    m_agentDockWidth = width;
+    QSettings settings;
+    settings.setValue(QStringLiteral("agent/panelWidth"), m_agentDockWidth);
+}
+
+void MainWindow::toggleAgentPanel()
+{
+    if (!isAgentFeatureAllowed()) {
+        if (m_actToggleAgent) {
+            QSignalBlocker blocker(m_actToggleAgent);
+            m_actToggleAgent->setChecked(false);
+        }
+        if (m_agentDock) {
+            m_agentDock->hide();
+        }
+        return;
+    }
+
+    ensureAgentDock();
+    if (!m_agentDock) {
+        return;
+    }
+
+    const bool show = m_actToggleAgent ? m_actToggleAgent->isChecked() : !m_agentDock->isVisible();
+    m_agentDock->setVisible(show);
+    if (show && m_agentPanel) {
+        m_agentPanel->reloadSettings();
+        m_agentPanel->refreshModels();
+    }
+}
+
+bool MainWindow::isAgentFeatureAllowed() const
+{
+    if (!m_librarySyncManager) {
+        return true;
+    }
+    return m_librarySyncManager->isStudentAgentAllowed();
+}
+
+void MainWindow::updateAgentAvailability()
+{
+    const bool allowed = isAgentFeatureAllowed();
+    if (m_actToggleAgent) {
+        m_actToggleAgent->setVisible(allowed);
+        if (!allowed) {
+            QSignalBlocker blocker(m_actToggleAgent);
+            m_actToggleAgent->setChecked(false);
+        }
+    }
+    if (!allowed && m_agentDock) {
+        m_agentDock->hide();
+    }
+    if (m_settingsWidget) {
+        m_settingsWidget->setAgentFeatureVisible(allowed);
+    }
+}
+
+QString MainWindow::agentEditorContext() const
+{
+    CodeEditor *editor = currentEditor();
+    if (!editor) {
+        return QStringLiteral(
+            "No code editor tab is active.\n"
+            "If the user asks to create a new program, emit replace_file and the IDE will open a new tab.");
+    }
+
+    QString path = m_editorToPath.value(editor);
+    if (path.isEmpty()) {
+        path = QStringLiteral("(unsaved file)");
+    }
+
+    return AgentEdit::buildNumberedFileContext(path, editor->toPlainText());
+}
+
+bool MainWindow::applyAgentResponseToEditor(const QString &assistantResponse, QString *statusMessage)
+{
+    const QVector<AgentEdit::Operation> ops = AgentEdit::parseOperations(assistantResponse);
+    if (ops.isEmpty()) {
+        if (statusMessage) {
+            *statusMessage = tr("Готово. Блоков правки не найдено (нужен <<<VUZHYK_EDIT ... <<<END_EDIT).");
+        }
+        return false;
+    }
+
+    CodeEditor *editor = currentEditor();
+    if (!editor) {
+        const int MAX_TABS = 50;
+        int codeEditorCount = 0;
+        for (int i = 0; i < m_tabWidget->count(); ++i) {
+            if (getEditorFromTabWidget(i)) {
+                ++codeEditorCount;
+            }
+        }
+        if (codeEditorCount >= MAX_TABS) {
+            if (statusMessage) {
+                *statusMessage = tr("Не удалось применить правки: слишком много вкладок.");
+            }
+            return false;
+        }
+
+        QWidget *container = new QWidget(m_tabWidget);
+        auto *layout = new QVBoxLayout(container);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->setSpacing(0);
+
+        CodeEditor *newEditor = new CodeEditor(container);
+        setupEditor(newEditor);
+        layout->addWidget(newEditor);
+        container->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        newEditor->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+        const int index = m_tabWidget->addTab(container, tr("Новый файл"));
+        m_editorToPath[newEditor] = QString();
+        m_tabWidget->setCurrentIndex(index);
+        editor = newEditor;
+    }
+
+    QString error;
+    const QString newText = AgentEdit::applyOperations(editor->toPlainText(), ops, &error);
+    if (!error.isEmpty()) {
+        if (statusMessage) {
+            *statusMessage = tr("Ошибка применения правок: %1").arg(error);
+        }
+        return false;
+    }
+
+    editor->setPlainText(newText);
+    editor->setModified(true);
+
+    QString language;
+    for (const AgentEdit::Operation &op : ops) {
+        if (!op.language.isEmpty()) {
+            language = op.language;
+            break;
+        }
+    }
+    QString ext = QStringLiteral("py");
+    if (language == QLatin1String("html") || language == QLatin1String("htm")) {
+        ext = QStringLiteral("html");
+    } else if (language == QLatin1String("javascript") || language == QLatin1String("js")) {
+        ext = QStringLiteral("js");
+    } else if (language == QLatin1String("css")) {
+        ext = QStringLiteral("css");
+    } else if (language == QLatin1String("json")) {
+        ext = QStringLiteral("json");
+    } else if (!language.isEmpty()
+               && language != QLatin1String("python")
+               && language != QLatin1String("py")) {
+        ext = language;
+    }
+    editor->setFileExtension(ext);
+    updateTabText(editor);
+
+    int replaceFile = 0, replaceLines = 0, insertAfter = 0, deleteLines = 0;
+    for (const AgentEdit::Operation &op : ops) {
+        switch (op.type) {
+        case AgentEdit::Type::ReplaceEntireFile: ++replaceFile; break;
+        case AgentEdit::Type::ReplaceLines: ++replaceLines; break;
+        case AgentEdit::Type::InsertAfter: ++insertAfter; break;
+        case AgentEdit::Type::DeleteLines: ++deleteLines; break;
+        }
+    }
+
+    QStringList parts;
+    if (replaceFile) parts << tr("файл целиком: %1").arg(replaceFile);
+    if (replaceLines) parts << tr("строки: %1").arg(replaceLines);
+    if (insertAfter) parts << tr("вставки: %1").arg(insertAfter);
+    if (deleteLines) parts << tr("удаления: %1").arg(deleteLines);
+
+    if (statusMessage) {
+        *statusMessage = tr("Готово. Применено к вкладке (%1).").arg(parts.join(QStringLiteral(", ")));
+    }
+    statusBar()->showMessage(tr("Агент применил правки к редактору."), 3000);
+    return true;
 }
 
 void MainWindow::toggleRepl(bool enabled) {
@@ -4096,6 +5058,9 @@ void MainWindow::applyTheme(const QString &theme) {
                 // Обновляем тему редактора (панель номеров и текущая строка)
                 editor->setTheme(theme);
             }
+            if (TurtleTaskWidget *task = turtleTaskFromWidget(m_tabWidget->widget(i))) {
+                task->setTheme(theme);
+            }
         }
     }
     
@@ -4112,6 +5077,14 @@ void MainWindow::applyTheme(const QString &theme) {
     // Обновляем тему редактора задач pyrob
     if (m_pyrobEditorWidget) {
         m_pyrobEditorWidget->setTheme(theme);
+    }
+
+    if (m_settingsWidget) {
+        m_settingsWidget->setTheme(theme);
+    }
+
+    if (m_agentPanel) {
+        m_agentPanel->setTheme(theme);
     }
 }
 
@@ -4183,6 +5156,9 @@ void MainWindow::saveWindowState() {
     
     // Также сохраняем геометрию окна отдельно
     settings.setValue("geometry", saveGeometry());
+    if (m_agentDock && m_agentDock->isVisible() && m_agentDock->width() >= agentDockMinWidth()) {
+        settings.setValue(QStringLiteral("agent/panelWidth"), m_agentDock->width());
+    }
     settings.sync();
 }
 
@@ -4206,12 +5182,16 @@ void MainWindow::openSettings() {
     // Если вкладка настроек уже открыта, просто переключаемся на неё
     if (m_settingsTabIndex >= 0 && m_settingsTabIndex < m_tabWidget->count()) {
         m_tabWidget->setCurrentIndex(m_settingsTabIndex);
+        if (m_settingsWidget) {
+            m_settingsWidget->resetSyncTabAccessOnOpen();
+        }
         return;
     }
     
     // Создаем виджет настроек, если его еще нет
     if (!m_settingsWidget) {
         m_settingsWidget = new SettingsWidget(this);
+        m_settingsWidget->setTheme(m_currentTheme);
         connect(m_settingsWidget, &SettingsWidget::fontSizeChanged, this, &MainWindow::applyFontSizeToAllEditors);
         connect(m_settingsWidget, &SettingsWidget::interpreterChanged, this, [this]() {
             // Обновляем статус при изменении интерпретатора
@@ -4233,14 +5213,48 @@ void MainWindow::openSettings() {
                 m_tabWidget->setTabsClosable(show);
             }
         });
+        connect(m_settingsWidget, &SettingsWidget::syncSettingsChanged, this, [this]() {
+            if (m_librarySyncManager) {
+                m_librarySyncManager->reloadSettings();
+            }
+            LibrarySyncServerControl::applyFromSettings();
+            updateSyncCountdownDisplay();
+            updateAgentAvailability();
+        });
+        connect(m_settingsWidget, &SettingsWidget::syncCheckConnectionRequested, this, [this]() {
+            if (!m_librarySyncManager) {
+                return;
+            }
+            m_librarySyncManager->reloadSettings();
+            QString message;
+            if (m_librarySyncManager->checkTeacherConnection(&message)) {
+                QMessageBox::information(this, tr("Синхронизация"), message);
+            } else {
+                QMessageBox::warning(this, tr("Синхронизация"), message);
+            }
+        });
+        connect(m_settingsWidget, &SettingsWidget::syncForceRequested, this, [this]() {
+            if (m_librarySyncManager) {
+                m_librarySyncManager->reloadSettings();
+                m_librarySyncManager->triggerForceSyncNow();
+            }
+        });
+        connect(m_settingsWidget, &SettingsWidget::agentSettingsChanged, this, [this]() {
+            if (m_agentPanel) {
+                m_agentPanel->reloadSettings();
+            }
+        });
+        updateAgentAvailability();
     }
     
-    // Добавляем вкладку настроек
+    if (m_extensionManager && m_settingsWidget) {
+        m_settingsWidget->setExtensionManager(m_extensionManager);
+    }
+
+    // Добавляем вкладку настроек (не переключаемся сразу — анимация переключит в конце)
     m_settingsTabIndex = m_tabWidget->addTab(m_settingsWidget, tr("Настройки"));
-    m_tabWidget->setCurrentIndex(m_settingsTabIndex);
-    
-    // Анимируем появление, чтобы поведение совпадало с обычными вкладками
-    m_settingsWidget->hide();
+    m_settingsWidget->resetSyncTabAccessOnOpen();
+    m_settingsWidget->hide(); // Скрываем до старта анимации, чтобы контент не мелькал
     animateTabOpening(m_settingsWidget, m_settingsTabIndex);
 }
 
@@ -4295,9 +5309,92 @@ void MainWindow::openHelp() {
         m_helpWidget->setTheme(m_currentTheme);
     }
     
-    // Добавляем вкладку справки
+    // Добавляем вкладку справки (не переключаемся сразу — анимация переключит в конце)
     m_helpTabIndex = m_tabWidget->addTab(m_helpWidget, tr("Справка"));
-    m_tabWidget->setCurrentIndex(m_helpTabIndex);
+    m_helpWidget->hide(); // Скрываем до старта анимации, чтобы контент не мелькал
+    animateTabOpening(m_helpWidget, m_helpTabIndex);
+}
+
+void MainWindow::openPythonDocumentation()
+{
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString docPath = appDir.filePath("Python38/Doc/python3810.chm");
+
+    if (!QFile::exists(docPath)) {
+        statusBar()->showMessage(tr("Документация Python не найдена"), 4000);
+        return;
+    }
+
+    if (!QDesktopServices::openUrl(QUrl::fromLocalFile(docPath))) {
+        statusBar()->showMessage(tr("Не удалось открыть документацию"), 4000);
+    }
+}
+
+void MainWindow::openTextbook()
+{
+    // Учебник и SumatraPDF лежат в папке tools/pdf (копируется при сборке)
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString pdfDirPath = appDir.filePath("tools/pdf");
+    const QDir pdfDir(pdfDirPath);
+
+    if (!pdfDir.exists()) {
+        statusBar()->showMessage(tr("Папка tools/pdf не найдена: %1").arg(pdfDirPath), 5000);
+        return;
+    }
+
+    const QString pdfPath = pdfDir.filePath("Informatika_6kl_Kotov.pdf");
+    QFileInfo pdfInfo(pdfPath);
+    if (!pdfInfo.exists() || !pdfInfo.isFile()) {
+        statusBar()->showMessage(tr("PDF файл учебника не найден: %1").arg(pdfInfo.absoluteFilePath()), 5000);
+        return;
+    }
+
+    const QString sumatraName = "SumatraPDF-3.5.2-64.exe";
+    const QString sumatraPath = pdfDir.filePath(sumatraName);
+    if (!QFile::exists(sumatraPath)) {
+        statusBar()->showMessage(tr("%1 не найден в папке tools/pdf.").arg(sumatraName), 5000);
+        return;
+    }
+
+    if (!QProcess::startDetached(sumatraPath, { pdfInfo.absoluteFilePath() })) {
+        statusBar()->showMessage(tr("Не удалось открыть PDF в SumatraPDF"), 5000);
+        return;
+    }
+
+    statusBar()->showMessage(tr("Учебник открыт в SumatraPDF"), 3000);
+}
+
+void MainWindow::openTextbook7()
+{
+    const QDir appDir(QCoreApplication::applicationDirPath());
+    const QString pdfDirPath = appDir.filePath("tools/pdf");
+    const QDir pdfDir(pdfDirPath);
+
+    if (!pdfDir.exists()) {
+        statusBar()->showMessage(tr("Папка tools/pdf не найдена: %1").arg(pdfDirPath), 5000);
+        return;
+    }
+
+    const QString pdfPath = pdfDir.filePath("Informatika_7kl_Kotov.pdf");
+    QFileInfo pdfInfo(pdfPath);
+    if (!pdfInfo.exists() || !pdfInfo.isFile()) {
+        statusBar()->showMessage(tr("PDF файл учебника не найден: %1").arg(pdfInfo.absoluteFilePath()), 5000);
+        return;
+    }
+
+    const QString sumatraName = "SumatraPDF-3.5.2-64.exe";
+    const QString sumatraPath = pdfDir.filePath(sumatraName);
+    if (!QFile::exists(sumatraPath)) {
+        statusBar()->showMessage(tr("%1 не найден в папке tools/pdf.").arg(sumatraName), 5000);
+        return;
+    }
+
+    if (!QProcess::startDetached(sumatraPath, { pdfInfo.absoluteFilePath() })) {
+        statusBar()->showMessage(tr("Не удалось открыть PDF в SumatraPDF"), 5000);
+        return;
+    }
+
+    statusBar()->showMessage(tr("Учебник 7 класс открыт в SumatraPDF"), 3000);
 }
 
 void MainWindow::openPyrobEditor() {
@@ -4337,12 +5434,9 @@ void MainWindow::openPyrobEditor() {
     m_pyrobEditorWidget = new PyrobEditorWidget(this);
     m_pyrobEditorWidget->setTheme(m_currentTheme);
     
-    // Добавляем вкладку редактора
+    // Добавляем вкладку редактора (не переключаемся сразу — анимация переключит в конце)
     m_pyrobEditorTabIndex = m_tabWidget->addTab(m_pyrobEditorWidget, tr("Редактор задач pyrob"));
-    m_tabWidget->setCurrentIndex(m_pyrobEditorTabIndex);
-    
-    // Анимируем появление
-    m_pyrobEditorWidget->hide();
+    m_pyrobEditorWidget->hide(); // Скрываем до старта анимации, чтобы контент не мелькал
     animateTabOpening(m_pyrobEditorWidget, m_pyrobEditorTabIndex);
 }
 
@@ -4372,20 +5466,16 @@ void MainWindow::openSnakeGame() {
         m_snakeGame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     }
 
-    // Добавляем вкладку игры
+    // Добавляем вкладку игры (не переключаемся сразу — анимация переключит в конце)
     m_snakeGameTabIndex = m_tabWidget->addTab(m_snakeGameContainer, tr("🐍 Змейка"));
-    m_tabWidget->setCurrentIndex(m_snakeGameTabIndex);
-
-    // Скрываем контейнер до начала анимации, чтобы избежать мерцания
-    m_snakeGameContainer->hide();
-
-    // Анимация появления
+    m_snakeGameContainer->hide(); // Скрываем до старта анимации, чтобы контент не мелькал
     animateTabOpening(m_snakeGameContainer, m_snakeGameTabIndex);
 }
 
 void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
-    // Если анимации отключены, просто переключаемся на вкладку
+    // Если анимации отключены, показываем виджет (он мог быть скрыт при addTab) и переключаемся на вкладку
     if (!m_animationsEnabled) {
+        if (widget) widget->show();
         if (m_tabWidget && tabIndex >= 0 && tabIndex < m_tabWidget->count()) {
             m_tabWidget->setCurrentIndex(tabIndex);
         }
@@ -4393,6 +5483,21 @@ void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
     }
     
     if (!widget || !m_tabWidget) return;
+    
+    // ВАЖНО: Останавливаем и удаляем все старые анимации ПЕРЕД созданием новых
+    if (!m_activeAnimations.isEmpty()) {
+        for (QPropertyAnimation *anim : m_activeAnimations) {
+            if (anim) {
+                anim->stop();
+                anim->disconnect();
+                anim->deleteLater();
+            }
+        }
+        m_activeAnimations.clear();
+        // Обрабатываем события для немедленного удаления
+        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
     
     // Получаем текущую активную вкладку (если есть)
     int currentIndex = m_tabWidget->currentIndex();
@@ -4441,21 +5546,26 @@ void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
         // Получаем родительский виджет для временного размещения виджетов
         QWidget *parentForAnimation = stackWidget ? static_cast<QWidget*>(stackWidget) : tabWidgetPtr;
         
-        // Получаем текущую позицию новой вкладки
-        QRect newWidgetRect = widgetPtr->geometry();
-        if (newWidgetRect.isEmpty() || newWidgetRect.width() <= 0) {
-            QPoint newPos = widgetPtr->mapTo(parentForAnimation, QPoint(0, 0));
-            newWidgetRect = QRect(newPos, QSize(width, height));
+        // Получаем РЕАЛЬНУЮ текущую геометрию currentWidget (если есть)
+        QRect currentStartRect;
+        if (currentWidgetPtr) {
+            currentStartRect = currentWidgetPtr->geometry();
+            // Если геометрия пустая, используем стандартную область
+            if (currentStartRect.isEmpty() || currentStartRect.width() <= 0) {
+                QPoint currentPos = currentWidgetPtr->mapTo(parentForAnimation, QPoint(0, 0));
+                currentStartRect = QRect(currentPos, QSize(width, height));
+            }
         }
         
         // Вычисляем позиции для анимации перелистывания вправо
-        QRect newStartRect = newWidgetRect;
-        newStartRect.moveLeft(newWidgetRect.left() + width); // Начальная позиция справа
-        QRect newEndRect = newWidgetRect; // Финальная позиция
+        // Новая вкладка начинает справа и приезжает в позицию текущей
+        QRect newEndRect = currentStartRect.isEmpty() ? QRect(0, 0, width, height) : currentStartRect;
+        QRect newStartRect = newEndRect;
+        newStartRect.moveLeft(newEndRect.left() + width); // Начальная позиция справа
         
-        QRect currentStartRect = newWidgetRect; // Текущая позиция
-        QRect currentEndRect = newWidgetRect;
-        currentEndRect.moveLeft(newWidgetRect.left() - width); // Уезжает влево
+        // Текущая вкладка уезжает влево
+        QRect currentEndRect = currentStartRect;
+        currentEndRect.moveLeft(currentStartRect.left() - width); // Уезжает влево
         
         // Сохраняем оригинальных родителей
         QWidget *newOriginalParent = widgetPtr->parentWidget();
@@ -4505,6 +5615,12 @@ void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
             currentWidgetPtr->setUpdatesEnabled(true);
         }
         
+        // Принудительно обновляем виджеты для корректной отрисовки содержимого
+        widgetPtr->update();
+        if (currentWidgetPtr) {
+            currentWidgetPtr->update();
+        }
+        
         // Запускаем анимацию перелистывания вправо
         QPropertyAnimation *newAnimation = new QPropertyAnimation(widgetPtr, "geometry", widgetPtr);
         newAnimation->setDuration(250);
@@ -4537,15 +5653,16 @@ void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
                 currentWidgetPtr->setParent(currentOriginalParent);
             }
             
-            // Переключаем вкладку (если ещё не переключена)
+            // Явно переключаем вкладку - это обновит и QTabBar (визуальное выделение) и QStackedWidget
             if (tabWidgetPtr->currentIndex() != tabIndex) {
-                if (stackWidgetPtr) {
-                    stackWidgetPtr->blockSignals(true);
-                    stackWidgetPtr->setCurrentIndex(tabIndex);
-                    stackWidgetPtr->blockSignals(false);
-                } else {
-                    tabWidgetPtr->setCurrentIndex(tabIndex);
-                }
+                tabWidgetPtr->setCurrentIndex(tabIndex);
+            }
+            
+            // Принудительно обновляем QTabBar для корректного визуального отображения
+            QTabBar *tabBar = tabWidgetPtr->tabBar();
+            if (tabBar) {
+                tabBar->setCurrentIndex(tabIndex);
+                tabBar->update();
             }
             
             // Скрываем старую вкладку
@@ -4560,23 +5677,7 @@ void MainWindow::animateTabOpening(QWidget *widget, int tabIndex) {
             widgetPtr->setGeometry(newEndRect);
         });
         
-        // Сохраняем ссылки на анимации для очистки
-        // Останавливаем и удаляем все старые анимации перед созданием новых
-        if (!m_activeAnimations.isEmpty()) {
-            QList<QPropertyAnimation*> toRemove;
-            for (QPropertyAnimation *anim : m_activeAnimations) {
-                if (anim) {
-                    anim->stop();
-                    anim->disconnect();
-                    anim->deleteLater();
-                    toRemove.append(anim);
-                }
-            }
-            m_activeAnimations.clear();
-            // Обрабатываем события для немедленного удаления
-            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-        }
+        // Сохраняем ссылки на новые анимации
         m_activeAnimations.append(newAnimation);
         if (currentAnimation) {
             m_activeAnimations.append(currentAnimation);
@@ -4604,12 +5705,28 @@ void MainWindow::animateTabSwitch(int fromIndex, int toIndex, std::function<void
     // Если анимации отключены, просто переключаем вкладку
     if (!m_animationsEnabled) {
         if (m_tabWidget && toIndex >= 0 && toIndex < m_tabWidget->count()) {
+            m_tabWidget->blockSignals(false); // Разблокируем сигналы
             m_tabWidget->setCurrentIndex(toIndex);
             if (onFinished) {
                 onFinished();
             }
         }
         return;
+    }
+    
+    // ВАЖНО: Останавливаем и удаляем все старые анимации ПЕРЕД созданием новых
+    if (!m_activeAnimations.isEmpty()) {
+        for (QPropertyAnimation *anim : m_activeAnimations) {
+            if (anim) {
+                anim->stop();
+                anim->disconnect();
+                anim->deleteLater();
+            }
+        }
+        m_activeAnimations.clear();
+        // Обрабатываем события для немедленного удаления
+        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
     
     if (!m_tabWidget || fromIndex < 0 || toIndex < 0 || 
@@ -4808,23 +5925,7 @@ void MainWindow::animateTabSwitch(int fromIndex, int toIndex, std::function<void
         }
     });
     
-    // Сохраняем ссылки на анимации для очистки
-    // Останавливаем и удаляем все старые анимации перед созданием новых
-    if (!m_activeAnimations.isEmpty()) {
-        QList<QPropertyAnimation*> toRemove;
-        for (QPropertyAnimation *anim : m_activeAnimations) {
-            if (anim) {
-                anim->stop();
-                anim->disconnect();
-                anim->deleteLater();
-                toRemove.append(anim);
-            }
-        }
-        m_activeAnimations.clear();
-        // Обрабатываем события для немедленного удаления
-        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-    }
+    // Сохраняем ссылки на новые анимации
     m_activeAnimations.append(fromAnimation);
     m_activeAnimations.append(toAnimation);
     
@@ -5204,5 +6305,92 @@ void MainWindow::readSocketData()
     activateWindow();
     show();
     setWindowState((windowState() & ~Qt::WindowMinimized) | Qt::WindowActive);
+}
+
+void MainWindow::updateSyncCountdownDisplay()
+{
+    if (!m_syncCountdownLabel || !m_librarySyncManager) {
+        return;
+    }
+
+    const bool shouldShow = m_librarySyncManager->showSyncTimer()
+        && m_librarySyncManager->isSyncEnabled()
+        && m_librarySyncManager->isStudentMode()
+        && !m_librarySyncManager->isSyncInProgress();
+
+    if (!shouldShow) {
+        m_syncCountdownLabel->setVisible(false);
+        return;
+    }
+
+    const int totalSeconds = m_librarySyncManager->secondsUntilNextSync();
+    if (totalSeconds < 0) {
+        m_syncCountdownLabel->setVisible(false);
+        return;
+    }
+
+    const int minutes = totalSeconds / 60;
+    const int seconds = totalSeconds % 60;
+    m_syncCountdownLabel->setText(tr("Синхронизация через %1:%2")
+                                      .arg(minutes, 2, 10, QChar('0'))
+                                      .arg(seconds, 2, 10, QChar('0')));
+    m_syncCountdownLabel->setVisible(true);
+}
+
+void MainWindow::setupLibrarySync()
+{
+    m_librarySyncManager = new LibrarySyncManager(this);
+    LibrarySyncServerControl::applyFromSettings();
+
+    m_syncCountdownTimer = new QTimer(this);
+    m_syncCountdownTimer->setInterval(1000);
+    connect(m_syncCountdownTimer, &QTimer::timeout, this, &MainWindow::updateSyncCountdownDisplay);
+    m_syncCountdownTimer->start();
+
+    connect(m_librarySyncManager, &LibrarySyncManager::syncStarted, this, [this]() {
+        if (m_syncCountdownLabel) {
+            m_syncCountdownLabel->setVisible(false);
+        }
+        if (m_syncProgressBar) {
+            m_syncProgressBar->setValue(0);
+            m_syncProgressBar->setVisible(true);
+        }
+        if (m_syncProgressLabel) {
+            m_syncProgressLabel->setText(tr("Синхронизация"));
+            m_syncProgressLabel->setVisible(true);
+        }
+    });
+
+    connect(m_librarySyncManager, &LibrarySyncManager::syncProgress, this,
+            [this](int current, int total, const QString &packageName) {
+                if (m_syncProgressBar) {
+                    m_syncProgressBar->setMaximum(total);
+                    m_syncProgressBar->setValue(current);
+                    m_syncProgressBar->setFormat(tr("%v / %m"));
+                    m_syncProgressBar->setVisible(true);
+                }
+                if (m_syncProgressLabel) {
+                    m_syncProgressLabel->setText(tr("Синхронизация: %1").arg(packageName));
+                    m_syncProgressLabel->setVisible(true);
+                }
+            });
+
+    connect(m_librarySyncManager, &LibrarySyncManager::syncFinished, this,
+            [this](bool success, const QString &message) {
+                if (m_syncProgressBar) {
+                    m_syncProgressBar->setVisible(false);
+                }
+                if (m_syncProgressLabel) {
+                    m_syncProgressLabel->setVisible(false);
+                }
+                statusBar()->showMessage(message, success ? 5000 : 8000);
+                updateSyncCountdownDisplay();
+            });
+
+    connect(m_librarySyncManager, &LibrarySyncManager::studentAgentAccessChanged,
+            this, &MainWindow::updateAgentAvailability);
+
+    updateSyncCountdownDisplay();
+    updateAgentAvailability();
 }
 

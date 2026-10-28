@@ -1,0 +1,18 @@
+<h1>4.3. Управление окном исполнителя Черепаха</h1>
+<p><code>setup(w, h)</code> — задать размеры окна Черепахи: <code>w</code> — ширина окна, <code>h</code> — высота окна.</p>
+<pre>from turtlexy import *
+setup(700, 631)</pre>
+<p><code>title(t)</code> — установить заголовок окна Черепахи: <code>t</code> — строка, которая показана в заголовке графического окна черепахи.</p>
+<pre>from turtlexy import *
+title('Черепаха')</pre>
+<p style="text-align:center;"><img src="cherepashka_okno.png" alt="Окно Черепаха" /></p>
+<p style="text-align:center; font-size:90%;"><em>Окно с заголовком «Черепаха»</em></p>
+<p><code>done()</code> — оставить открытым окно модуля <code>turtle</code>.</p>
+<p><code>clear()</code> — удалить все линии и рисунки с окна, не передвигая саму Черепашку, не меняя её место или цвет.</p>
+<p>По окончании выполнения скрипта со сценарием <code>turtle</code> окно сразу закрывается. При выполнении <code>done()</code> окно остаётся открытым. По окончании выполнения скрипта со сценарием <code>turtlexy</code> окно не закрывается, использование <code>done()</code> не требуется.</p>
+<p><code>exitonclick()</code> — закрыть окно модуля <code>turtle</code> по щелчку мышкой.</p>
+<p>При выполнении <code>exitonclick()</code> ожидается щелчок мыши по окну, чтобы его закрыть.</p>
+<p><code>hide_grid()</code> — скрыть координатную сетку с осями модуля <code>turtlexy</code>.</p>
+<p><code>show_grid()</code> — показать координатную сетку с осями модуля <code>turtlexy</code>.</p>
+<p><code>show_mouse_coords()</code> — показать подсказку с координатами курсора мыши при использовании <code>turtlexy</code>.</p>
+<p><code>hide_mouse_coords()</code> — скрыть подсказку с координатами курсора при использовании <code>turtlexy</code>.</p>

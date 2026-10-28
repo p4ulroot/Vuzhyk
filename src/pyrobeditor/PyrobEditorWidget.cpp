@@ -2,6 +2,7 @@
 #include "grideditor.h"
 #include "projectmodel.h"
 #include "../MainWindow.h"
+#include "../PythonInterpreterPaths.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -36,6 +37,17 @@
 #include <QPainter>
 #include <QFont>
 #include <QFontMetrics>
+#include <QStandardPaths>
+
+namespace {
+
+QString documentsDirectory()
+{
+	const QString docs = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+	return docs.isEmpty() ? QDir::homePath() : docs;
+}
+
+} // namespace
 
 PyrobEditorWidget::PyrobEditorWidget(QWidget *parent)
 	: QWidget(parent)
@@ -69,7 +81,16 @@ PyrobEditorWidget::PyrobEditorWidget(QWidget *parent)
 	// Используем слабую ссылку в lambda, чтобы избежать циклических ссылок
 	connect(m_model, &ProjectModel::changed, this, [this]() {
 		// Можно добавить индикатор изменений, если нужно
-		// Используем this напрямую, так как connection будет удален при disconnect()
+	});
+	connect(m_model, &ProjectModel::variantSwitched, this, [this](int) {
+		if (m_rowsSpin && m_colsSpin && m_model) {
+			m_rowsSpin->blockSignals(true);
+			m_colsSpin->blockSignals(true);
+			m_rowsSpin->setValue(m_model->rows());
+			m_colsSpin->setValue(m_model->cols());
+			m_rowsSpin->blockSignals(false);
+			m_colsSpin->blockSignals(false);
+		}
 	});
 	// Устанавливаем тему по умолчанию (светлая)
 	m_theme = "light";
@@ -1299,55 +1320,30 @@ void PyrobEditorWidget::newProject()
     m_currentTaskPath.clear();
 }
 
-QString PyrobEditorWidget::defaultTasksDirectory() const
+QString PyrobEditorWidget::defaultTasksDirectory(bool forSaveOrExport) const
 {
-	// Получаем путь к pyrob/tasks в текущем интерпретаторе Python
 	QString pythonPath;
 	if (m_mainWindow) {
-		// Получаем путь к интерпретатору Python из MainWindow
 		pythonPath = m_mainWindow->pythonPath();
 	}
-	
-	QString defaultDir;
-	if (!pythonPath.isEmpty()) {
-		// Получаем директорию интерпретатора
-		QFileInfo pythonInfo(pythonPath);
-		QString pythonDir = pythonInfo.absolutePath();
-		
-		// Пробуем найти pyrob/tasks в site-packages
-		// Путь может быть: pythonDir/Lib/site-packages/pyrob/tasks или pythonDir/lib/site-packages/pyrob/tasks
-		QStringList possiblePaths;
-		possiblePaths << QDir(pythonDir).filePath("Lib/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/python3.8/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/python3.9/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/python3.10/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/python3.11/site-packages/pyrob/tasks");
-		possiblePaths << QDir(pythonDir).filePath("lib/python3.12/site-packages/pyrob/tasks");
-		
-		for (const QString &path : possiblePaths) {
-			if (QDir(path).exists()) {
-				defaultDir = path;
-				break;
-			}
-		}
+
+	bool pyrobInstalled = false;
+	const QString tasksDir = PythonInterpreterPaths::pyrobTasksDir(pythonPath, &pyrobInstalled);
+	if (pyrobInstalled) {
+		return tasksDir;
 	}
-	
-	// Если не нашли, пробуем встроенный Python
-	if (defaultDir.isEmpty()) {
-		QString defaultDirBuiltin = QCoreApplication::applicationDirPath();
-		defaultDirBuiltin = QDir(defaultDirBuiltin).filePath("python/Lib/site-packages/pyrob/tasks");
-		if (QDir(defaultDirBuiltin).exists()) {
-			defaultDir = defaultDirBuiltin;
-		}
+
+	if (forSaveOrExport) {
+		return documentsDirectory();
 	}
-	
-	// Если папка не существует, используем текущую директорию
-	if (defaultDir.isEmpty() || !QDir(defaultDir).exists()) {
-		defaultDir = QDir::currentPath();
+
+	const QString embeddedTasks = QDir(QCoreApplication::applicationDirPath())
+		.filePath("Python38/Lib/site-packages/pyrob/tasks");
+	if (QDir(embeddedTasks).exists()) {
+		return embeddedTasks;
 	}
-	
-	return defaultDir;
+
+	return documentsDirectory();
 }
 
 void PyrobEditorWidget::openProject()
@@ -1364,7 +1360,7 @@ void PyrobEditorWidget::saveProject()
 {
 	QString path = m_currentProjectPath;
 	if (path.isEmpty()) {
-        path = showFilePicker(trKey("project_filter"), defaultTasksDirectory(), true, false);
+        path = showFilePicker(trKey("project_filter"), defaultTasksDirectory(true), true, false);
 		if (path.isEmpty()) return;
 		if (!path.endsWith(".pyrob.json")) path += ".pyrob.json";
 	}
@@ -1375,7 +1371,7 @@ void PyrobEditorWidget::saveProject()
 
 void PyrobEditorWidget::exportPython()
 {
-    QString path = showFilePicker(trKey("python_filter"), defaultTasksDirectory(), true, false);
+    QString path = showFilePicker(trKey("python_filter"), defaultTasksDirectory(true), true, false);
 	if (path.isEmpty()) return;
 	if (!path.endsWith(".py")) path += ".py";
 	QString baseName = QFileInfo(path).baseName();
@@ -1395,7 +1391,7 @@ void PyrobEditorWidget::saveTask()
 {
     QString path = m_currentTaskPath;
     if (path.isEmpty()) {
-        QString defaultDir = defaultTasksDirectory();
+        QString defaultDir = defaultTasksDirectory(true);
         QString suggested = QDir(defaultDir).filePath("task_1_1.py");
         path = showFilePicker(trKey("python_filter"), suggested, true, false);
         if (path.isEmpty()) return;

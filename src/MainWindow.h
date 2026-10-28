@@ -8,7 +8,7 @@
 #include <QTextBrowser>
 #include <QTreeView>
 #include <QFileSystemModel>
-#include <QMenuBar>
+#include "HoverActivatedMenuBar.h"
 #include <QDockWidget>
 #include <QTabWidget>
 #include <QStackedWidget>
@@ -19,6 +19,14 @@
 #include <functional>
 #include <QLocalServer>
 #include <QLocalSocket>
+#include <QList>
+#include <QProgressBar>
+
+#include "extensions/ExtensionManager.h"
+#include "tasks/TurtleTaskWidget.h"
+
+class LibrarySyncManager;
+class AgentPanel;
 
 class CodeEditor;
 class TitleBar;
@@ -28,6 +36,7 @@ class HelpWidget;
 class PyrobEditorWidget;
 class SnakeGame;
 class ConsoleWidget;
+class QMenu;
 class QStringListModel;
 class QPropertyAnimation;
 
@@ -79,8 +88,13 @@ private slots:
     void openSettings();
     void closeSettingsTab();
     void openHelp();
+    void openPythonDocumentation();
+    void openTextbook();
+    void openTextbook7();
     void openPyrobEditor();
     void openSnakeGame();
+    void toggleAgentPanel();
+    void openTurtleTaskWorkbook();
 
 private slots:
     void onNewConnection();
@@ -90,6 +104,9 @@ private:
     void setupUi();
     void setupActions();
     void setupConnections();
+    void setupExtensions();
+    void refreshExtensionActions();
+    void clearExtensionActions();
     void setupLocalServer();
     bool maybeSave();
     bool saveToPath(const QString &path);
@@ -99,6 +116,7 @@ private:
     QString configuredPythonPath() const;
     void setCurrentFilePath(const QString &path);
     QString saveUnsavedToTemp(CodeEditor *editor);
+    bool isTempPyrobSolutionPath(const QString &path) const;
     void appendOutput(const QString &text, bool isError);
     void toggleOutputMode();
     void appendReplOutput(const QString &text, bool isError);
@@ -126,16 +144,36 @@ private:
     CodeEditor *currentEditor() const;
     CodeEditor *getEditorFromTabWidget(int index) const;
     CodeEditor *getEditorFromWidget(QWidget *widget) const;
+    TurtleTaskWidget *currentTurtleTask() const;
+    TurtleTaskWidget *turtleTaskFromWidget(QWidget *widget) const;
+    void openTurtleTask(const TurtleTaskDefinition &task);
     void updateTabText(CodeEditor *editor);
     int findTabByPath(const QString &path) const;
     void setupEditor(CodeEditor *editor);
     void updateWindowTitle();
     void applyFontSizeToAllEditors(int size);
     void applyShortcut(const QString &actionName, const QKeySequence &sequence);
+    void refreshFileTypeActions();
+    bool isHtmlFile(const QString &path) const;
+    bool openEmbeddedBrowserForFile(const QString &filePath);
+    bool openInSystemDefault(const QString &filePath);
+    bool startExtensionRunProcess(const ExtensionManager::ExtensionAction &action, const QString &absoluteFilePath);
     void loadShortcutsFromSettings();
+    void applyEditorShortcuts();
+    QKeySequence shortcutFromSettings(const QString &name, const QKeySequence &defaultSequence) const;
     void animateTabOpening(QWidget *widget, int tabIndex);
     void animateTabSwitch(int fromIndex, int toIndex, std::function<void()> onFinished = {});
     void parseErrorAndHighlight(const QString &errorText);
+    void setupLibrarySync();
+    void updateSyncCountdownDisplay();
+    void ensureAgentDock();
+    void applyAgentDockWidth();
+    void saveAgentDockWidth();
+    int agentDockMinWidth() const;
+    void updateAgentAvailability();
+    bool isAgentFeatureAllowed() const;
+    QString agentEditorContext() const;
+    bool applyAgentResponseToEditor(const QString &assistantResponse, QString *statusMessage);
     
 public:
     QString showFilePicker(const QString &filter, const QString &initialDir = QString(), bool isSave = false, bool isDirectory = false);
@@ -185,10 +223,24 @@ private:
     QTreeView *m_fsView { nullptr };
     QDockWidget *m_replDock { nullptr };
     QDockWidget *m_projectDock { nullptr };
-    QMenuBar *m_menuBar { nullptr };
+    HoverActivatedMenuBar *m_menuBar { nullptr };
+    QMenu *m_toolsMenu { nullptr };
     TitleBar *m_titleBar { nullptr };
     WindowFrameOverlay *m_frameOverlay { nullptr };
     QToolBar *m_toolBar { nullptr };
+    QList<QAction*> m_extensionActions;
+    ExtensionManager *m_extensionManager { nullptr };
+    LibrarySyncManager *m_librarySyncManager { nullptr };
+    AgentPanel *m_agentPanel { nullptr };
+    QDockWidget *m_agentDock { nullptr };
+    QAction *m_actToggleAgent { nullptr };
+    int m_agentDockWidth { 260 };
+    bool m_applyingAgentDockWidth { false };
+    QLabel *m_syncProgressLabel { nullptr };
+    QProgressBar *m_syncProgressBar { nullptr };
+    QLabel *m_syncCountdownLabel { nullptr };
+    QTimer *m_syncCountdownTimer { nullptr };
+    QProcess *m_embeddedBrowserProcess { nullptr };
     QString m_currentTheme;
     QTimer *m_completionUpdateTimer { nullptr }; // Таймер для debounce обновления автодополнения
     QList<QPropertyAnimation*> m_activeAnimations; // Список активных анимаций для очистки
@@ -217,6 +269,9 @@ private:
     QAction *m_actDebug { nullptr };
     QAction *m_actDebugNext { nullptr };
     QAction *m_actRunInTerminal { nullptr };
+    QAction *m_actPythonDocs { nullptr };
+    QAction *m_actTextbook { nullptr };
+    QAction *m_actTextbook7 { nullptr };
     
     // Single instance support
     QLocalServer *m_localServer { nullptr };

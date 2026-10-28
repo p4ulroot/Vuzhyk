@@ -1,16 +1,28 @@
 #ifdef _WIN32
+#ifndef _CRT_SECURE_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <windows.h>
+#include <shellapi.h>
 #include <commdlg.h>
 #include <shlobj.h>
+#include <objbase.h>
 #include <iostream>
 #include <string>
 #include <vector>
 #include <cctype>
 #include <algorithm>
 
-int main(int argc, char *argv[])
+struct ComInit {
+    bool ok = false;
+    ComInit() : ok(SUCCEEDED(CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED))) {}
+    ~ComInit() { if (ok) CoUninitialize(); }
+};
+
+static int runFilePicker(int argc, char *argv[])
 {
+    ComInit com;
+
     // Парсим аргументы командной строки
     std::string extension; // Обязательный параметр
     std::string initialDir; // Опциональный параметр
@@ -110,7 +122,7 @@ int main(int argc, char *argv[])
         ofn.lpstrFileTitle = nullptr;
         ofn.nMaxFileTitle = 0;
         ofn.lpstrInitialDir = nullptr;
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_OVERWRITEPROMPT;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT;
         
         // Устанавливаем фильтр на основе расширения
         // Формат для Windows: "Description\0Pattern\0All Files\0*.*\0\0"
@@ -231,6 +243,40 @@ int main(int argc, char *argv[])
     
     return 1;
 }
+
+int main(int argc, char *argv[])
+{
+    return runFilePicker(argc, argv);
+}
+
+static std::vector<std::string> getCommandLineArgs()
+{
+    std::vector<std::string> args;
+    LPWSTR cmdLine = GetCommandLineW();
+    int nArgs = 0;
+    LPWSTR* argvW = CommandLineToArgvW(cmdLine, &nArgs);
+    if (!argvW || nArgs < 1) return args;
+    for (int i = 0; i < nArgs; i++) {
+        int len = WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, nullptr, 0, nullptr, nullptr);
+        if (len <= 0) continue;
+        std::string s(len - 1, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, argvW[i], -1, &s[0], len, nullptr, nullptr);
+        args.push_back(std::move(s));
+    }
+    LocalFree(argvW);
+    return args;
+}
+
+int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
+{
+    std::vector<std::string> args = getCommandLineArgs();
+    std::vector<char*> argvPtrs;
+    for (auto& s : args) argvPtrs.push_back(&s[0]);
+    int argc = static_cast<int>(argvPtrs.size());
+    char** argv = argvPtrs.empty() ? nullptr : argvPtrs.data();
+    return runFilePicker(argc, argv);
+}
+
 #else
 // Для не-Windows платформ используем простой fallback
 #include <iostream>

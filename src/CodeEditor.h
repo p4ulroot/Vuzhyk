@@ -2,6 +2,7 @@
 
 #include <Qsci/qsciscintilla.h>
 #include <Qsci/qscilexerpython.h>
+#include <Qsci/qscilexerhtml.h>
 #include <QCompleter>
 #include <QWidget>
 #include <QSet>
@@ -12,6 +13,7 @@
 #include <QTextCursor>
 #include <QPaintEvent>
 #include <QImage>
+#include <QKeySequence>
 
 class CodeEditor : public QsciScintilla {
     Q_OBJECT
@@ -22,6 +24,9 @@ public:
     QCompleter *completer() const { return m_completer; }
     
     void setTheme(const QString &theme);
+    void setFileExtension(const QString &extension);
+    void setCommentShortcut(const QKeySequence &sequence);
+    void setUncommentShortcut(const QKeySequence &sequence);
     
     void highlightErrorLines(const QList<int> &lineNumbers);
     void clearErrorHighlight();
@@ -68,18 +73,24 @@ private:
     void applyTheme(const QString &theme);
     void updateMarginWidths(); // Обновление ширины колонок при изменении размера шрифта
     void updateBreakpointMarkers(); // Обновление размера маркеров брейкпоинтов при изменении размера шрифта
+    void commentSelectedLines();
+    void uncommentSelectedLines();
+    bool keyEventMatchesShortcut(const QKeyEvent *event, const QKeySequence &shortcut) const;
     
     // Создание изображения chevron (две палки, образующие угол)
     QImage createChevronImage(bool right, const QColor &color = QColor(0, 0, 0));  // true = вправо (>), false = вниз (⌄)
     
     QCompleter *m_completer { nullptr };
-    QsciLexerPython *m_lexer { nullptr };
+    QsciLexer *m_lexer { nullptr };
+    QString m_currentLanguage { "python" };
     QString m_theme { "light" };
     QList<int> m_errorLineNumbers;
     QSet<int> m_breakpoints;
     QTextDocument *m_dummyDocument { nullptr }; // Для совместимости с document()
     int m_hoverBreakpointLine { -1 }; // Строка, где показывается предпросмотр брейкпоинта
     int m_currentFontSize { 10 }; // Текущий размер шрифта для отслеживания изменений
+    QKeySequence m_commentShortcut { QStringLiteral("Alt+3") };
+    QKeySequence m_uncommentShortcut { QStringLiteral("Alt+Ctrl+3") };
     
     // Индикаторы для ошибок и точек останова
     static const int ERROR_INDICATOR = 0;

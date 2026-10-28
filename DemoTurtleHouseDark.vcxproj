@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Demo|x64">
+      <Configuration>Demo</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{65EFABCD-8765-4321-A1B2-C3D4E5F60723}</ProjectGuid>
+    <RootNamespace>DemoTurtleHouseDark</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <QtVersion>5.12.12</QtVersion>
+    <Keyword>QtVS_v304</Keyword>
+    <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Demo|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(QtMsBuild)\qt_defaults.props" Condition="Exists('$(QtMsBuild)\qt_defaults.props')" />
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
+  </PropertyGroup>
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
+  </PropertyGroup>
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
+  </PropertyGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Demo\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)\DemoTurtleHouseDark_intermediate\</IntDir>
+    <TargetExt>.exe</TargetExt>
+    <TargetName>DemoTurtleHouseDark12</TargetName>
+    <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\Demo\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)\DemoTurtleHouseDark_intermediate\</IntDir>
+    <TargetExt>.exe</TargetExt>
+    <TargetName>DemoTurtleHouseDark12</TargetName>
+    <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\Demo\Demo\</OutDir>
+    <IntDir>$(SolutionDir)$(Platform)\Demo\DemoTurtleHouseDark_intermediate\</IntDir>
+    <TargetExt>.exe</TargetExt>
+    <TargetName>DemoTurtleHouseDark12</TargetName>
+    <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>GeneratedFiles\$(ConfigurationName);GeneratedFiles;demo;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtSvg;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Svg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>GeneratedFiles\$(ConfigurationName);GeneratedFiles;demo;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtSvg;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Svg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Demo|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>GeneratedFiles\$(ConfigurationName);GeneratedFiles;demo;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtSvg;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <Optimization>MaxSpeed</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/utf-8 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5Svg.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="demo\DemoCursor.cpp" />
+    <ClCompile Include="demo\DemoTurtleCanvas.cpp" />
+    <ClCompile Include="demo\DemoTurtleTask.cpp" />
+    <ClCompile Include="demo\DemoIdeWindow.cpp" />
+    <ClCompile Include="demo\DemoRecorder.cpp" />
+    <ClCompile Include="demo\DemoH264Impl.c">
+      <WarningLevel>TurnOffAllWarnings</WarningLevel>
+      <CompileAs>CompileAsC</CompileAs>
+    </ClCompile>
+    <ClCompile Include="demo\scenes\house_dark_main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="demo\DemoIcons.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="demo\DemoCursor.h" />
+    <QtMoc Include="demo\DemoTurtleCanvas.h" />
+    <QtMoc Include="demo\DemoTurtleTask.h" />
+    <QtMoc Include="demo\DemoIdeWindow.h" />
+    <QtMoc Include="demo\DemoRecorder.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="demo\demo.qrc" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="demo\app.rc" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(QtMsBuild)\qt.targets" Condition="Exists('$(QtMsBuild)\qt.targets')" />
+  <Target Name="CopyQtDllsDemo" AfterTargets="Build">
+    <ItemGroup>
+      <QtDlls Include="$(QTDIR)\bin\Qt5Core.dll" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5Gui.dll" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5Widgets.dll" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5Svg.dll" />
+    </ItemGroup>
+    <Copy SourceFiles="@(QtDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <MakeDir Directories="$(OutDir)platforms" />
+    <Copy SourceFiles="$(QTDIR)\plugins\platforms\qwindows.dll" DestinationFolder="$(OutDir)platforms" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\platforms\qwindows.dll')" />
+    <MakeDir Directories="$(OutDir)imageformats" />
+    <Copy SourceFiles="$(QTDIR)\plugins\imageformats\qico.dll" DestinationFolder="$(OutDir)imageformats" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\imageformats\qico.dll')" />
+    <Copy SourceFiles="$(QTDIR)\plugins\imageformats\qsvg.dll" DestinationFolder="$(OutDir)imageformats" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\imageformats\qsvg.dll')" />
+    <MakeDir Directories="$(OutDir)styles" Condition="Exists('$(QTDIR)\plugins\styles\qwindowsvistastyle.dll')" />
+    <Copy SourceFiles="$(QTDIR)\plugins\styles\qwindowsvistastyle.dll" DestinationFolder="$(OutDir)styles" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\styles\qwindowsvistastyle.dll')" />
+    <Copy SourceFiles="$(SolutionDir)icons\logo\vuzhyk.ico" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(SolutionDir)icons\logo\vuzhyk.ico')" />
+  </Target>
+  <Target Name="DeployDemoToNetwork" AfterTargets="CopyQtDllsDemo" Condition="'$(Configuration)'=='Demo'">
+    <Exec Command="robocopy &quot;$(OutDir).&quot; &quot;\\vmware-host\Shared Folders\vmshared\Demo&quot; /E /IS /IT /NFL /NDL /NJH /NJS" IgnoreExitCode="true" />
+    <Message Text="Deployed to \\vmware-host\Shared Folders\vmshared\Demo (robocopy exit 0-7 = OK)" Importance="high" />
+  </Target>
+</Project>

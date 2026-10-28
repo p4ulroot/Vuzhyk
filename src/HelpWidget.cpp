@@ -12,6 +12,7 @@
 #include <QPalette>
 #include <QApplication>
 #include <QStyle>
+#include <QAbstractItemView>
 
 HelpWidget::HelpWidget(QWidget *parent)
     : QWidget(parent) {
@@ -107,7 +108,7 @@ void HelpWidget::setupUi() {
     auto *layout = new QVBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    
+
     m_splitter = new QSplitter(Qt::Horizontal, this);
     
     // Создаем дерево разделов
@@ -144,6 +145,7 @@ void HelpWidget::setupUi() {
     // Создаем браузер содержимого
     m_contentBrowser = new QTextBrowser(this);
     m_contentBrowser->setOpenLinks(false);
+    setupHelpBrowserPaths();
     
     m_splitter->addWidget(m_treeWidget);
     m_splitter->addWidget(m_contentBrowser);
@@ -156,6 +158,39 @@ void HelpWidget::setupUi() {
     
     // Подключаем сигнал клика на элемент дерева
     connect(m_treeWidget, &QTreeWidget::itemClicked, this, &HelpWidget::onItemClicked);
+}
+
+static QTreeWidgetItem *helpFindItem(QTreeWidgetItem *item, const QString &key)
+{
+    if (!item)
+        return nullptr;
+    if (item->data(0, Qt::UserRole).toString() == key)
+        return item;
+    for (int i = 0; i < item->childCount(); ++i) {
+        if (QTreeWidgetItem *found = helpFindItem(item->child(i), key))
+            return found;
+    }
+    return nullptr;
+}
+
+QTreeWidgetItem *HelpWidget::findItemByKey(const QString &key) const
+{
+    if (!m_treeWidget || key.isEmpty())
+        return nullptr;
+    for (int i = 0; i < m_treeWidget->topLevelItemCount(); ++i) {
+        if (QTreeWidgetItem *found = helpFindItem(m_treeWidget->topLevelItem(i), key))
+            return found;
+    }
+    return nullptr;
+}
+
+void HelpWidget::showItem(QTreeWidgetItem *item)
+{
+    if (!item || !m_treeWidget)
+        return;
+    m_treeWidget->setCurrentItem(item);
+    m_treeWidget->scrollToItem(item, QAbstractItemView::PositionAtCenter);
+    onItemClicked(item, 0);
 }
 
 void HelpWidget::createTreeWidget() {
@@ -329,6 +364,106 @@ void HelpWidget::addTreeItems() {
     auto *functions_10 = new QTreeWidgetItem(functions);
     functions_10->setText(0, "3.10. Строки документации");
     functions_10->setData(0, Qt::UserRole, "functions_docstring");
+
+    auto *grade6 = new QTreeWidgetItem(m_treeWidget);
+    grade6->setText(0, "4. 6 класс");
+    grade6->setData(0, Qt::UserRole, "grade6_main");
+
+    auto *grade6_1 = new QTreeWidgetItem(grade6);
+    grade6_1->setText(0, "4.1. Подключение модуля");
+    grade6_1->setData(0, Qt::UserRole, "grade6_import");
+
+    auto *grade6_2 = new QTreeWidgetItem(grade6);
+    grade6_2->setText(0, "4.2. Внешний вид Черепахи");
+    grade6_2->setData(0, Qt::UserRole, "grade6_shape");
+
+    auto *grade6_3 = new QTreeWidgetItem(grade6);
+    grade6_3->setText(0, "4.3. Управление окном");
+    grade6_3->setData(0, Qt::UserRole, "grade6_window");
+
+    auto *grade6_4 = new QTreeWidgetItem(grade6);
+    grade6_4->setText(0, "4.4. Движение Черепахи");
+    grade6_4->setData(0, Qt::UserRole, "grade6_move");
+
+    auto *grade6_5 = new QTreeWidgetItem(grade6);
+    grade6_5->setText(0, "4.5. Управление пером");
+    grade6_5->setData(0, Qt::UserRole, "grade6_pen");
+
+    auto *grade6_6 = new QTreeWidgetItem(grade6);
+    grade6_6->setText(0, "4.6. Цвет пера");
+    grade6_6->setData(0, Qt::UserRole, "grade6_color");
+
+    auto *grade6_7 = new QTreeWidgetItem(grade6);
+    grade6_7->setText(0, "4.7. Состояние Черепахи");
+    grade6_7->setData(0, Qt::UserRole, "grade6_state");
+
+    auto *grade6_8 = new QTreeWidgetItem(grade6);
+    grade6_8->setText(0, "4.8. Вспомогательный алгоритм");
+    grade6_8->setData(0, Qt::UserRole, "grade6_functions");
+
+    auto *grade7 = new QTreeWidgetItem(m_treeWidget);
+    grade7->setText(0, "5. 7 класс");
+    grade7->setData(0, Qt::UserRole, "grade7_main");
+
+    auto *grade7_1 = new QTreeWidgetItem(grade7);
+    grade7_1->setText(0, "5.1. Исполнитель Робот");
+    grade7_1->setData(0, Qt::UserRole, "grade7_robot");
+
+    auto *grade7_2 = new QTreeWidgetItem(grade7);
+    grade7_2->setText(0, "5.2. Циклы");
+    grade7_2->setData(0, Qt::UserRole, "grade7_loops");
+
+    auto *grade7_3 = new QTreeWidgetItem(grade7);
+    grade7_3->setText(0, "5.3. Ветвление и условия");
+    grade7_3->setData(0, Qt::UserRole, "grade7_branch");
+
+    auto *grade7_4 = new QTreeWidgetItem(grade7);
+    grade7_4->setText(0, "5.4. Вывод и типы данных");
+    grade7_4->setData(0, Qt::UserRole, "grade7_python");
+
+    auto *grade7_5 = new QTreeWidgetItem(grade7);
+    grade7_5->setText(0, "5.5. Ввод данных и вычисления");
+    grade7_5->setData(0, Qt::UserRole, "grade7_calc");
+
+    auto *grade7_6 = new QTreeWidgetItem(grade7);
+    grade7_6->setText(0, "5.6. Целые числа: // и %");
+    grade7_6->setData(0, Qt::UserRole, "grade7_int");
+}
+
+void HelpWidget::setupHelpBrowserPaths() {
+    if (!m_contentBrowser) {
+        return;
+    }
+    const QString appDir = QCoreApplication::applicationDirPath();
+    QStringList roots;
+    roots << appDir
+          << QDir(appDir).filePath(QStringLiteral(".."))
+          << QDir(appDir).filePath(QStringLiteral("../.."));
+
+    QStringList paths;
+    for (const QString &root : roots) {
+        const QDir dir(root);
+        paths << dir.filePath(QStringLiteral("tools/pdf/6kl_ris"));
+        paths << dir.filePath(QStringLiteral("help"));
+    }
+    m_contentBrowser->setSearchPaths(paths);
+}
+
+QString HelpWidget::loadExternalHelp(const QString &key) const {
+    const QString appDir = QCoreApplication::applicationDirPath();
+    QStringList roots;
+    roots << appDir
+          << QDir(appDir).filePath(QStringLiteral(".."))
+          << QDir(appDir).filePath(QStringLiteral("../.."));
+
+    for (const QString &root : roots) {
+        const QString path = QDir(root).filePath(QStringLiteral("help/") + key + QStringLiteral(".html"));
+        QFile f(path);
+        if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return QString::fromUtf8(f.readAll());
+        }
+    }
+    return QString();
 }
 
 void HelpWidget::onItemClicked(QTreeWidgetItem *item, int column) {
@@ -1024,6 +1159,7 @@ h3 { color: %6; margin-top: 10px; }
 table { border-collapse: collapse; width: 100%; margin: 10px 0px; }
 table th { background-color: %7; color: %8; padding: 8px; border: 1px solid %9; }
 table td { padding: 6px; border: 1px solid %10; }
+img { max-width: 100%; height: auto; }
 </style>
 )")
         .arg(bodyColor).arg(h1Color).arg(h1BorderColor).arg(h2Color).arg(h2BorderColor)
@@ -1033,6 +1169,10 @@ table td { padding: 6px; border: 1px solid %10; }
 }
 
 QString HelpWidget::getHelpContent(const QString &key) {
+    const QString external = loadExternalHelp(key);
+    if (!external.isEmpty()) {
+        return external;
+    }
     if (key == "types_main") {
         return R"(<h1>1. Типы данных</h1>
 <p><strong>Переменная в языке программирования</strong> — это название для зарезервированного места в памяти компьютера, предназначенное для хранения значений. 

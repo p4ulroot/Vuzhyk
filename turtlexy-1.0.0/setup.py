@@ -1,0 +1,34 @@
+from setuptools import setup, find_packages
+
+with open("README.md", "r", encoding="utf-8") as fh:
+    long_description = fh.read()
+
+setup(
+    name="turtlexy",
+    version="1.0.4",
+    author="Grossbeak",
+    author_email="grossbeak.pub@gmail.com",
+    description="Turtle graphics library with automatic coordinate grid",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    packages=find_packages(),
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Education",
+        "Intended Audience :: Developers",
+        "Topic :: Education",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "License :: OSI Approved :: Python Software Foundation License",
+        "Operating System :: OS Independent",
+    ],
+    python_requires=">=3.6",
+    keywords="turtle graphics education grid coordinates axes",
+)
+

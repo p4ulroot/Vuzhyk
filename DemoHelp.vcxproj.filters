@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="demo">
+      <UniqueIdentifier>{e4f5a6b7-c8d9-0123-def0-1234567804a1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="demo\scenes">
+      <UniqueIdentifier>{e4f5a6b7-c8d9-0123-def0-1234567804a2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{e4f5a6b7-c8d9-0123-def0-1234567804a3}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="demo\DemoCursor.cpp">
+      <Filter>demo</Filter>
+    </ClCompile>
+    <ClCompile Include="demo\DemoHelpWindow.cpp">
+      <Filter>demo</Filter>
+    </ClCompile>
+    <ClCompile Include="demo\DemoRecorder.cpp">
+      <Filter>demo</Filter>
+    </ClCompile>
+    <ClCompile Include="demo\DemoH264Impl.c">
+      <Filter>demo</Filter>
+    </ClCompile>
+    <ClCompile Include="demo\scenes\help_main.cpp">
+      <Filter>demo\scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="src\HelpWidget.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="demo\DemoIcons.h">
+      <Filter>demo</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="demo\DemoCursor.h">
+      <Filter>demo</Filter>
+    </QtMoc>
+    <QtMoc Include="demo\DemoHelpWindow.h">
+      <Filter>demo</Filter>
+    </QtMoc>
+    <QtMoc Include="demo\DemoRecorder.h">
+      <Filter>demo</Filter>
+    </QtMoc>
+    <QtMoc Include="src\HelpWidget.h">
+      <Filter>src</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="demo\demo.qrc">
+      <Filter>demo</Filter>
+    </QtRcc>
+    <ResourceCompile Include="demo\app.rc">
+      <Filter>demo</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+</Project>

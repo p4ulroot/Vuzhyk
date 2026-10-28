@@ -1,5 +1,6 @@
 #include "ConsoleWidget.h"
 #include <QApplication>
+#include <QKeyEvent>
 #include <QTextCursor>
 #include <QTextCharFormat>
 #include <QScrollBar>
@@ -49,6 +50,7 @@ ConsoleWidget::ConsoleWidget(QWidget *parent)
     m_input->setPlaceholderText(tr("Введите команду..."));
     
     connect(m_input, &QLineEdit::returnPressed, this, &ConsoleWidget::onInputReturnPressed);
+    m_input->installEventFilter(this);
     
     layout->addWidget(m_output);
     layout->addWidget(m_input);
@@ -327,8 +329,76 @@ void ConsoleWidget::onProcessFinished(int exitCode, QProcess::ExitStatus status)
     }
 }
 
+bool ConsoleWidget::eventFilter(QObject *obj, QEvent *event) {
+    if (obj == m_input && event->type() == QEvent::KeyPress) {
+        const auto *keyEvent = static_cast<QKeyEvent *>(event);
+        if (keyEvent->key() == Qt::Key_Up) {
+            navigateHistory(-1);
+            return true;
+        }
+        if (keyEvent->key() == Qt::Key_Down) {
+            navigateHistory(1);
+            return true;
+        }
+    }
+    return QWidget::eventFilter(obj, event);
+}
+
+void ConsoleWidget::addToHistory(const QString &command) {
+    if (command.isEmpty()) {
+        return;
+    }
+    if (!m_commandHistory.isEmpty() && m_commandHistory.last() == command) {
+        m_historyIndex = -1;
+        m_historyDraft.clear();
+        return;
+    }
+    m_commandHistory.append(command);
+    const int maxHistorySize = 1000;
+    if (m_commandHistory.size() > maxHistorySize) {
+        m_commandHistory.removeFirst();
+    }
+    m_historyIndex = -1;
+    m_historyDraft.clear();
+}
+
+void ConsoleWidget::navigateHistory(int direction) {
+    if (m_commandHistory.isEmpty()) {
+        return;
+    }
+
+    if (m_historyIndex < 0 && direction < 0) {
+        m_historyDraft = m_input->text();
+    }
+
+    if (direction < 0) {
+        if (m_historyIndex < 0) {
+            m_historyIndex = m_commandHistory.size() - 1;
+        } else if (m_historyIndex > 0) {
+            --m_historyIndex;
+        }
+    } else {
+        if (m_historyIndex < 0) {
+            return;
+        }
+        if (m_historyIndex < m_commandHistory.size() - 1) {
+            ++m_historyIndex;
+        } else {
+            m_historyIndex = -1;
+            m_input->setText(m_historyDraft);
+            m_historyDraft.clear();
+            return;
+        }
+    }
+
+    if (m_historyIndex >= 0 && m_historyIndex < m_commandHistory.size()) {
+        m_input->setText(m_commandHistory.at(m_historyIndex));
+    }
+}
+
 void ConsoleWidget::onInputReturnPressed() {
-    QString command = m_input->text().trimmed();
+    const QString rawCommand = m_input->text().trimmed();
+    QString command = rawCommand;
     if (command.isEmpty()) {
         // Отправляем просто Enter
         if (m_process && m_process->state() == QProcess::Running) {
@@ -345,7 +415,8 @@ void ConsoleWidget::onInputReturnPressed() {
         command = command.replace(QRegularExpression("^pip\\s+", QRegularExpression::CaseInsensitiveOption), 
                                   pythonCmd + " -m pip ");
     }
-    
+
+    addToHistory(rawCommand);
     writeCommand(command);
     m_input->clear();
 }

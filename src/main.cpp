@@ -8,6 +8,12 @@
 #include <QLocalSocket>
 #include <QLocalServer>
 #include <QMessageBox>
+#include <QLoggingCategory>
+#include <QDateTime>
+#include <QFile>
+#include <QStandardPaths>
+#include <QTextStream>
+#include <QIODevice>
 #include "MainWindow.h"
 
 #ifdef Q_OS_WIN
@@ -20,7 +26,63 @@
 #include <crtdbg.h>
 #endif
 
+static QString g_logPath;
+
+// Обработчик сообщений Qt для вывода в Debug Output Windows и файл
+void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
+{
+    QByteArray localMsg = msg.toLocal8Bit();
+    const char *file = context.file ? context.file : "";
+    const char *function = context.function ? context.function : "";
+    
+    QString formattedMsg;
+    switch (type) {
+    case QtDebugMsg:
+        formattedMsg = QString("[DEBUG] %1").arg(localMsg.constData());
+        break;
+    case QtInfoMsg:
+        formattedMsg = QString("[INFO] %1").arg(localMsg.constData());
+        break;
+    case QtWarningMsg:
+        formattedMsg = QString("[WARNING] %1").arg(localMsg.constData());
+        break;
+    case QtCriticalMsg:
+        formattedMsg = QString("[CRITICAL] %1").arg(localMsg.constData());
+        break;
+    case QtFatalMsg:
+        formattedMsg = QString("[FATAL] %1").arg(localMsg.constData());
+        break;
+    }
+    
+    // Выводим в файл для гарантированного просмотра
+    QString logPath = g_logPath;
+    if (logPath.isEmpty()) {
+        // На старте (до QApplication) applicationDirPath может быть пустым. Тогда пишем в %TEMP%.
+        const QString tempDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
+        logPath = QDir(tempDir).filePath("Vuzhyk_debug.log");
+    }
+
+    QFile logFile(logPath);
+    if (logFile.open(QIODevice::WriteOnly | QIODevice::Append)) {
+        QTextStream stream(&logFile);
+        stream << QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss.zzz") << " " << formattedMsg << "\n";
+        logFile.close();
+    }
+    
+#ifdef Q_OS_WIN
+    // Выводим в Debug Output Windows (видно в Visual Studio Output)
+    OutputDebugStringA((formattedMsg + "\n").toLocal8Bit().constData());
+    // Также выводим в stderr для консоли
+    fprintf(stderr, "%s\n", formattedMsg.toLocal8Bit().constData());
+#else
+    fprintf(stderr, "%s\n", formattedMsg.toLocal8Bit().constData());
+#endif
+}
+
 int main(int argc, char *argv[]) {
+    // Устанавливаем обработчик сообщений Qt для вывода в Debug Output
+    qInstallMessageHandler(qtMessageHandler);
+    
 #ifdef _DEBUG
     // Включаем обнаружение утечек памяти
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -33,6 +95,10 @@ int main(int argc, char *argv[]) {
     QApplication::setApplicationName("Vuzhyk");
     QApplication::setOrganizationName("Vuzhyk");
     QApplication::setWindowIcon(QIcon(":/icons/icons/logo/vuzhyk.ico"));
+
+    // Теперь QApplication создан — фиксируем лог рядом с exe (чтобы вы точно нашли файл)
+    g_logPath = QCoreApplication::applicationDirPath() + "/Vuzhyk_debug.log";
+    qDebug() << "Лог-файл:" << g_logPath;
 
     // Проверяем, не запущен ли уже экземпляр приложения
     QString serverName = "VuzhykIDE_SingleInstance";

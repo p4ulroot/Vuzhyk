@@ -1,0 +1,66 @@
+Metadata-Version: 2.1
+Name: pyrob
+Version: 0.8.1
+Summary: A CLI to manage dependencies in a Python project
+Author-email: Robert Adams <r0b4dams@gmail.com>
+License: MIT License
+        
+        Copyright (c) 2024 Robert Adams
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/r0b4dams/pyrob
+Project-URL: Issues, https://github.com/r0b4dams/pyrob/issues
+Project-URL: Repository, https://github.com/r0b4dams/pyrob.git
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
+# pyrob
+
+A simple CLI to help manage project package requirements
+
+## Table of contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+- [Development](#development)
+
+## Installation
+
+```bash
+pip install pyrob
+```
+
+## Usage
+
+| Command                      | Description                                           |
+| ---------------------------- | ----------------------------------------------------- |
+| `pyrob init [-y]`            | Initialize a new project                              |
+| `pyrob run [script]`         | Run the given command defined in project.json         |
+| `pyrob install [pkgs ...]`   | Install the given packages to virtual environment     |
+| `pyrob uninstall [pkgs ...]` | Uninstall the given packages from virtual environment |
+| `pyrob clean`                | Remove cache artifacts (e.g. `__pycache__`)           |
+
+## Development
+
+A Makefile is included with targets to handle dev actions
+
+| Command                 | Description                                                  |
+| ----------------------- | ------------------------------------------------------------ |
+| `make venv`             | Create a virtual environment with `venv` module              |
+| `make test`             | Run unit tests with `pytest`                                 |
+| `make lint`             | Lint using `pylint`                                          |
+| `make format`           | Format using `black`                                         |
+| `make typecheck`        | Typecheck using `mypy`                                       |
+| `make build`            | Build a binary wheel and a source tarball                    |
+| `make release`          | Push a new tag, create a GitHub release, and publish to PyPI |
+| `make install`          | Install the package globally                                 |
+| `make uninstall`        | Uninstall package globally                                   |
+| `make clean`            | Delete virtual environment and build/cache artifacts         |
+| `make testpypi`         | Publishes current build to TestPyPI                          |
+| `make install_testpypi` | Install from TestPyPI                                        |

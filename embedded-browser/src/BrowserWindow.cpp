@@ -3,8 +3,11 @@
 #include <QUrl>
 #include <QMessageBox>
 #include <QDesktopServices>
+#include <QFileInfo>
+#include <QWebEngineSettings>
+#include <QWebEngineProfile>
 
-BrowserWindow::BrowserWindow(QWidget *parent)
+BrowserWindow::BrowserWindow(const QString &initialPath, QWidget *parent)
     : QMainWindow(parent)
     , m_webView(nullptr)
     , m_urlLineEdit(nullptr)
@@ -14,13 +17,13 @@ BrowserWindow::BrowserWindow(QWidget *parent)
     , m_goButton(nullptr)
     , m_progressBar(nullptr)
     , m_toolbar(nullptr)
+    , m_initialPath(initialPath)
 {
     setupUI();
     setupToolbar();
     setupWebView();
     
-    // Загружаем стартовую страницу
-    m_webView->load(QUrl("https://www.google.com"));
+    loadInitialPath();
 }
 
 BrowserWindow::~BrowserWindow()
@@ -49,6 +52,21 @@ void BrowserWindow::setupUI()
     m_progressBar->setVisible(false);
     m_progressBar->setMaximumWidth(200);
     statusBar()->addPermanentWidget(m_progressBar);
+}
+
+void BrowserWindow::loadInitialPath()
+{
+    if (m_initialPath.isEmpty()) {
+        m_webView->load(QUrl("https://www.google.com"));
+        return;
+    }
+
+    QFileInfo info(m_initialPath);
+    if (info.exists() && info.isFile()) {
+        m_webView->load(QUrl::fromLocalFile(info.absoluteFilePath()));
+    } else {
+        m_webView->load(QUrl(m_initialPath));
+    }
 }
 
 void BrowserWindow::setupToolbar()
@@ -92,6 +110,11 @@ void BrowserWindow::setupToolbar()
 
 void BrowserWindow::setupWebView()
 {
+    // Настраиваем QtWebEngine для разрешения доступа к локальным файлам
+    QWebEngineSettings *settings = m_webView->settings();
+    settings->setAttribute(QWebEngineSettings::LocalContentCanAccessFileUrls, true);
+    settings->setAttribute(QWebEngineSettings::LocalContentCanAccessRemoteUrls, true);
+    
     connect(m_webView, &QWebEngineView::urlChanged, this, &BrowserWindow::urlChanged);
     connect(m_webView, &QWebEngineView::loadStarted, this, &BrowserWindow::loadStarted);
     connect(m_webView, &QWebEngineView::loadProgress, this, &BrowserWindow::loadProgress);

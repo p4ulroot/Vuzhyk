@@ -23,6 +23,9 @@ public:
     void terminate();
     void ensureStarted();
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 signals:
     void outputReceived(const QString &text, bool isError);
     void commandFinished(int exitCode);
@@ -37,6 +40,8 @@ private:
     void appendOutput(const QString &text, bool isError = false);
     void appendInput(const QString &text);
     QString getPythonDirectory() const;
+    void addToHistory(const QString &command);
+    void navigateHistory(int direction);
 
     QPlainTextEdit *m_output;
     QLineEdit *m_input;
@@ -44,5 +49,8 @@ private:
     QString m_pythonPath;
     QString m_currentDirectory;
     bool m_isRunningCommand;
+    QStringList m_commandHistory;
+    int m_historyIndex { -1 };
+    QString m_historyDraft;
 };
 

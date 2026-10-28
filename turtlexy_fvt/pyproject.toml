@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "turtlexy_fvt"
+version = "1.0.0"
+description = "turtlexy fork that draws into the Vuzhyk IDE (not published)"
+readme = "README.md"
+requires-python = ">=3.6"
+license = {text = "Python Software Foundation License"}
+authors = [
+    {name = "Vuzhyk"}
+]
+classifiers = [
+    "Private :: Do Not Upload",
+]
+
+[tool.setuptools.packages.find]
+include = ["turtlexy_fvt*"]

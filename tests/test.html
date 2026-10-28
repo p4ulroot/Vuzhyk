@@ -1,0 +1,189 @@
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="ru" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="ru" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>1.1. Переменные в Python &mdash; документация Python Lessons </title>
+  
+
+  
+  
+  
+  
+  
+
+  
+  <script type="text/javascript" src="js/modernizr.min.js"></script>
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../" src="documentation_options.js"></script>
+        <script src="jquery.js"></script>
+        <script src="underscore.js"></script>
+        <script src="doctools.js"></script>
+        <script src="language_data.js"></script>
+        <script src="translations.js"></script>
+        
+    
+    <script type="text/javascript" src="js/theme.js"></script>
+
+    
+
+  
+  <link rel="stylesheet" href="css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="pygments.css" type="text/css" />
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+    }
+    .rst-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .wy-breadcrumbs {
+      margin-bottom: 20px;
+    }
+  </style>
+    <link rel="index" title="Алфавитный указатель" href="https://pylessons.readthedocs.io/ru/latest/genindex.html" />
+    <link rel="search" title="Поиск" href="https://pylessons.readthedocs.io/ru/latest/search.html" />
+
+<!-- RTD Extra Head -->
+
+
+
+<script type="application/json" id="READTHEDOCS_DATA">{"ad_free": false, "api_host": "https://readthedocs.org", "build_date": "2021-03-30T04:36:29Z", "builder": "sphinx", "canonical_url": null, "commit": "87b11443", "docroot": "/source/", "features": {"docsearch_disabled": false}, "global_analytics_code": "UA-17997319-1", "language": "ru", "page": "basics/types", "programming_language": "", "project": "pylessons", "proxied_api_host": "/_", "source_suffix": ".rst", "subprojects": {}, "theme": "sphinx_rtd_theme", "user_analytics_code": "", "version": "latest"}</script>
+
+<!--
+Using this variable directly instead of using `JSON.parse` is deprecated.
+The READTHEDOCS_DATA global variable will be removed in the future.
+-->
+<script type="text/javascript">
+READTHEDOCS_DATA = JSON.parse(document.getElementById('READTHEDOCS_DATA').innerHTML);
+</script>
+
+
+
+<!-- end RTD <extrahead> -->
+<script async type="text/javascript" src="readthedocs-addons.js"></script><meta name="readthedocs-project-slug" content="pylessons" /><meta name="readthedocs-version-slug" content="latest" /><meta name="readthedocs-resolver-filename" content="/basics/variables_in_python.html" /><meta name="readthedocs-http-status" content="200" /></head>
+
+<body>
+
+  <div class="rst-content">
+        
+          
+
+
+
+
+
+        <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="python">
+<h2><span class="section-number">1.1. </span>Переменные в Python:<a class="headerlink" href="variables_in_python.html#python" title="Ссылка на этот заголовок">¶</a></h2>
+<p>Переменная в языке программирования это название для зарезервированного места в памяти компьютера,
+предназначенное для хранения значений. Это означает, что когда вы создаете переменную, вы на самом деле резервируете
+определенное место в памяти компьютера.
+Основываясь на типе данных переменной, интерпретатор выделяет необходимое количество памяти и решает, что может
+находится в зарезервированной области памяти.
+Для понимания, можете думать о переменной как о коробке, в которую можно положить любую вещь, но только определенного
+размера. Размер в данном примере будет типом переменной. Это не совсем верное определение, но оно дает общее представление о картине в целом.</p>
+<p><strong>Присвоение значения переменной:</strong></p>
+<p>В Python вам не нужно объявлять тип переменной вручную (как, например в С++). Объявление происходит автоматически
+(это называется динамическая типизация), когда вы присваиваете значение переменной. Знак равенства ( = ) используется
+для присвоения значения переменной.
+Операнд по левую сторону от знака равно ( = ) это имя переменной, операнд по правую сторону - значение присвоенное
+этой переменной.</p>
+<p><strong>Таблица - Обзор встроенных типов объектов</strong></p>
+<table class="docutils align-default" style="border: 2px solid black; border-collapse: collapse;">
+<colgroup>
+<col style="width: 35%" />
+<col style="width: 11%" />
+<col style="width: 54%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head" style="border: 1px solid black;"><p>Имя</p></th>
+<th class="head" style="border: 1px solid black;"><p>Тип</p></th>
+<th class="head" style="border: 1px solid black;"><p>Описание  и пример</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td style="border: 1px solid black;"><p>Целые Числа</p></td>
+<td style="border: 1px solid black;"><p>int</p></td>
+<td style="border: 1px solid black;"><dl class="simple">
+<dt>Целые положительные или отрицательные числа</dt><dd><p>-35, 0, 24, 123467890033373747428</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="row-odd"><td style="border: 1px solid black;"><p>Числа с плавающей точкой</p></td>
+<td style="border: 1px solid black;"><p>float</p></td>
+<td style="border: 1px solid black;"><p>Дробные числа 3.14, 2.5, -2.33333, 0.12334</p></td>
+</tr>
+<tr class="row-even"><td style="border: 1px solid black;"><p>Строки</p></td>
+<td style="border: 1px solid black;"><p>str</p></td>
+<td style="border: 1px solid black;"><p>Строки «asdf», «Hello world», «123456»</p></td>
+</tr>
+<tr class="row-odd"><td style="border: 1px solid black;"><p>Списки</p></td>
+<td style="border: 1px solid black;"><p>list</p></td>
+<td style="border: 1px solid black;"><dl class="simple">
+<dt>последовательность элементов</dt><dd><p>[«hello», -123, 0.34, «345»]</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="row-even"><td style="border: 1px solid black;"><p>Словарь</p></td>
+<td style="border: 1px solid black;"><p>dict</p></td>
+<td style="border: 1px solid black;"><p>Последовательность пар элементов содержаших
+ключ-значение (key-value)</p>
+<blockquote>
+<div><p>{«Language»: «Python», «Version»: «3.8»}</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="row-odd"><td style="border: 1px solid black;"><p>Кортеж (Tuple)</p></td>
+<td style="border: 1px solid black;"><p>tup</p></td>
+<td style="border: 1px solid black;"><p>Неизменяемая упорядоченная последовательность
+элементов («hostname», 1234, -0.45, -32)</p></td>
+</tr>
+<tr class="row-even"><td style="border: 1px solid black;"><p>Множество</p></td>
+<td style="border: 1px solid black;"><p>set</p></td>
+<td style="border: 1px solid black;"><dl class="simple">
+<dt>Изменяемая неупоряоченная последовательность</dt><dd><p>элементов {10, «Name», -30, 4.02, 100}</p>
+</dd>
+</dl>
+</td>
+</tr>
+<tr class="row-odd"><td style="border: 1px solid black;"><p>Булевые значения</p></td>
+<td style="border: 1px solid black;"><p>bool</p></td>
+<td style="border: 1px solid black;"><dl class="simple">
+<dt>Тип данных принимающий одно из двух значений</dt><dd><p>true - истина
+false - ложь</p>
+</dd>
+</dl>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+
+
+           </div>
+           
+          </div>
+
+  </div>
+
+
+  
+   
+
+</body>
+</html>
+

@@ -24,7 +24,8 @@
 #include <QPalette>
 
 CodeEditor::CodeEditor(QWidget *parent)
-    : QsciScintilla(parent), m_lexer(new QsciLexerPython(this)) {
+    : QsciScintilla(parent)
+    , m_lexer(nullptr) {
     
     // Настройка лексера Python
     setupLexer();
@@ -133,10 +134,9 @@ CodeEditor::CodeEditor(QWidget *parent)
 void CodeEditor::setupLexer() {
     if (!m_lexer) {
         m_lexer = new QsciLexerPython(this);
+        m_currentLanguage = "python";
     }
-    
-    // Настройка шрифта для лексера (используем тот же шрифт, что и в редакторе)
-    // Если шрифт редактора еще не установлен, создаем такой же
+
     QFont font = this->font();
     if (font.family().isEmpty()) {
         font.setFamily("Consolas, 'Courier New', monospace");
@@ -144,69 +144,96 @@ void CodeEditor::setupLexer() {
         int fontSize = settings.value("editor/fontSize", 10).toInt();
         font.setPointSize(fontSize);
     }
+
     m_lexer->setFont(font);
-    
-    // Включаем распознавание имен классов и функций
-    m_lexer->setDefaultPaper(QColor(255, 255, 255));
-    m_lexer->setDefaultColor(QColor(0, 0, 0));
-    
-    // Настройка для лучшего распознавания Python кода
-    // Включаем подсветку имен классов и функций
-    m_lexer->setFoldComments(true);
-    m_lexer->setFoldQuotes(true);
-    
-    // Устанавливаем лексер
     setLexer(m_lexer);
-    
-    // Настраиваем API для автокомплита (ключевые слова Python)
-    QsciAPIs *apis = new QsciAPIs(m_lexer);
-    if (apis) {
-        // Добавляем ключевые слова Python
-        QStringList keywords = {
-            // Ключевые слова
-            "and", "as", "assert", "break", "class", "continue", "def", "del",
-            "elif", "else", "except", "False", "finally", "for", "from", "global",
-            "if", "import", "in", "is", "lambda", "None", "nonlocal", "not",
-            "or", "pass", "raise", "return", "True", "try", "while", "with", "yield",
-            // Встроенные функции
-            "abs", "all", "any", "ascii", "bin", "bool", "bytearray", "bytes",
-            "callable", "chr", "classmethod", "compile", "complex", "delattr", "dict", "dir",
-            "divmod", "enumerate", "eval", "exec", "filter", "float", "format", "frozenset",
-            "getattr", "globals", "hasattr", "hash", "help", "hex", "id", "input",
-            "int", "isinstance", "issubclass", "iter", "len", "list", "locals", "map",
-            "max", "memoryview", "min", "next", "object", "oct", "open", "ord",
-            "pow", "print", "property", "range", "repr", "reversed", "round", "set",
-            "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super", "tuple",
-            "type", "vars", "zip", "__import__",
-            // Исключения
-            "BaseException", "Exception", "ArithmeticError", "AssertionError", "AttributeError",
-            "BufferError", "EOFError", "ImportError", "IndentationError", "IndexError",
-            "KeyError", "KeyboardInterrupt", "LookupError", "MemoryError", "NameError",
-            "NotImplementedError", "OSError", "OverflowError", "ReferenceError", "RuntimeError",
-            "StopIteration", "SyntaxError", "SystemError", "SystemExit", "TypeError",
-            "UnboundLocalError", "UnicodeError", "UnicodeDecodeError", "UnicodeEncodeError",
-            "UnicodeTranslateError", "ValueError", "ZeroDivisionError",
-            // Константы
-            "Ellipsis", "NotImplemented", "__debug__", "__name__", "__file__", "__doc__"
-        };
-        
-        for (const QString &keyword : keywords) {
-            apis->add(keyword);
+    applyTheme(m_theme);
+
+    if (auto python = qobject_cast<QsciLexerPython*>(m_lexer)) {
+        QsciAPIs *apis = new QsciAPIs(python);
+        if (apis) {
+            QStringList keywords = {
+                // Ключевые слова
+                "and", "as", "assert", "break", "class", "continue", "def", "del",
+                "elif", "else", "except", "False", "finally", "for", "from", "global",
+                "if", "import", "in", "is", "lambda", "None", "nonlocal", "not",
+                "or", "pass", "raise", "return", "True", "try", "while", "with", "yield",
+                // Встроенные функции
+                "abs", "all", "any", "ascii", "bin", "bool", "bytearray", "bytes",
+                "callable", "chr", "classmethod", "compile", "complex", "delattr", "dict", "dir",
+                "divmod", "enumerate", "eval", "exec", "filter", "float", "format", "frozenset",
+                "getattr", "globals", "hasattr", "hash", "help", "hex", "id", "input",
+                "int", "isinstance", "issubclass", "iter", "len", "list", "locals", "map",
+                "max", "memoryview", "min", "next", "object", "oct", "open", "ord",
+                "pow", "print", "property", "range", "repr", "reversed", "round", "set",
+                "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super", "type",
+                "vars", "zip", "__import__",
+                // Исключения
+                "BaseException", "Exception", "ArithmeticError", "AssertionError", "AttributeError",
+                "BufferError", "EOFError", "ImportError", "IndentationError", "IndexError",
+                "KeyError", "KeyboardInterrupt", "LookupError", "MemoryError", "NameError",
+                "NotImplementedError", "OSError", "OverflowError", "ReferenceError", "RuntimeError",
+                "StopIteration", "SyntaxError", "SystemError", "SystemExit", "TypeError",
+                "UnboundLocalError", "UnicodeError", "UnicodeDecodeError", "UnicodeEncodeError",
+                "UnicodeTranslateError", "ValueError", "ZeroDivisionError",
+                // Константы
+                "Ellipsis", "NotImplemented", "__debug__", "__name__", "__file__", "__doc__"
+            };
+
+            for (const QString &keyword : keywords) {
+                apis->add(keyword);
+            }
+
+            apis->prepare();
+            python->setAPIs(apis);
         }
-        
-        apis->prepare();
-        m_lexer->setAPIs(apis);
     }
+}
+
+void CodeEditor::setFileExtension(const QString &extension)
+{
+    QString normalized = extension.trimmed().toLower();
+    if (normalized.startsWith('.')) {
+        normalized = normalized.mid(1);
+    }
+
+    QString targetLanguage = "python";
+    if (normalized == "html" || normalized == "htm" || normalized == "xhtml") {
+        targetLanguage = "html";
+    }
+
+    if (targetLanguage == m_currentLanguage && m_lexer) {
+        return;
+    }
+
+    if (m_lexer) {
+        setLexer(nullptr);
+        m_lexer->deleteLater();
+        m_lexer = nullptr;
+    }
+
+    if (targetLanguage == "html") {
+        m_lexer = new QsciLexerHTML(this);
+    } else {
+        m_lexer = new QsciLexerPython(this);
+    }
+
+    m_currentLanguage = targetLanguage;
+    setupLexer();
 }
 
 void CodeEditor::updateAPIs(const QStringList &additionalWords) {
     if (!m_lexer) return;
+    auto python = qobject_cast<QsciLexerPython*>(m_lexer);
+    if (!python) {
+        return;
+    }
     
     // Безопасно получаем старый API
     QsciAPIs *oldAPIs = nullptr;
     QsciAbstractAPIs *oldAPIsAbstract = nullptr;
     try {
-        oldAPIsAbstract = m_lexer->apis();
+        oldAPIsAbstract = python->apis();
         if (oldAPIsAbstract) {
             oldAPIs = qobject_cast<QsciAPIs*>(oldAPIsAbstract);
         }
@@ -226,7 +253,7 @@ void CodeEditor::updateAPIs(const QStringList &additionalWords) {
     }
     
     // Создаем новый API объект
-    QsciAPIs *apis = new QsciAPIs(m_lexer);
+    QsciAPIs *apis = new QsciAPIs(python);
     if (!apis) return;
     
     // Добавляем базовые ключевые слова Python
@@ -244,8 +271,8 @@ void CodeEditor::updateAPIs(const QStringList &additionalWords) {
         "int", "isinstance", "issubclass", "iter", "len", "list", "locals", "map",
         "max", "memoryview", "min", "next", "object", "oct", "open", "ord",
         "pow", "print", "property", "range", "repr", "reversed", "round", "set",
-        "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super", "tuple",
-        "type", "vars", "zip", "__import__",
+        "setattr", "slice", "sorted", "staticmethod", "str", "sum", "super", "type",
+        "vars", "zip", "__import__",
         // Исключения
         "BaseException", "Exception", "ArithmeticError", "AssertionError", "AttributeError",
         "BufferError", "EOFError", "ImportError", "IndentationError", "IndexError",
@@ -271,7 +298,7 @@ void CodeEditor::updateAPIs(const QStringList &additionalWords) {
     }
     
     // Устанавливаем API в лексер
-    m_lexer->setAPIs(apis);
+    python->setAPIs(apis);
     
     // Подготавливаем API (асинхронно)
     apis->prepare();
@@ -363,11 +390,119 @@ void CodeEditor::insertCompletion(const QString &completion) {
     insert(completion);
 }
 
+void CodeEditor::setCommentShortcut(const QKeySequence &sequence)
+{
+    m_commentShortcut = sequence;
+}
+
+void CodeEditor::setUncommentShortcut(const QKeySequence &sequence)
+{
+    m_uncommentShortcut = sequence;
+}
+
+bool CodeEditor::keyEventMatchesShortcut(const QKeyEvent *event, const QKeySequence &shortcut) const
+{
+    if (!event || shortcut.isEmpty()) {
+        return false;
+    }
+    // Qt 5.12: QKeySequence::matches(key, modifiers, text) недоступен
+    const QKeySequence pressed(event->key() | int(event->modifiers()));
+    return pressed == shortcut;
+}
+
+void CodeEditor::commentSelectedLines()
+{
+    int lineFrom = 0;
+    int indexFrom = 0;
+    int lineTo = 0;
+    int indexTo = 0;
+
+    if (hasSelectedText()) {
+        getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
+    } else {
+        getCursorPosition(&lineFrom, &indexFrom);
+        lineTo = lineFrom;
+    }
+
+    beginUndoAction();
+    for (int line = lineTo; line >= lineFrom; --line) {
+        const QString lineText = text(line);
+        if (lineText.startsWith(QLatin1Char('#'))) {
+            continue;
+        }
+        setCursorPosition(line, 0);
+        insert(QStringLiteral("#"));
+    }
+    endUndoAction();
+
+    if (hasSelectedText()) {
+        setSelection(lineFrom, indexFrom + 1, lineTo, indexTo + 1);
+    } else {
+        setCursorPosition(lineFrom, indexFrom + 1);
+    }
+}
+
+void CodeEditor::uncommentSelectedLines()
+{
+    int lineFrom = 0;
+    int indexFrom = 0;
+    int lineTo = 0;
+    int indexTo = 0;
+
+    if (hasSelectedText()) {
+        getSelection(&lineFrom, &indexFrom, &lineTo, &indexTo);
+    } else {
+        getCursorPosition(&lineFrom, &indexFrom);
+        lineTo = lineFrom;
+    }
+
+    const bool hadSelection = hasSelectedText();
+    bool changed = false;
+
+    beginUndoAction();
+    for (int line = lineTo; line >= lineFrom; --line) {
+        const QString lineText = text(line);
+        if (!lineText.startsWith(QLatin1Char('#'))) {
+            continue;
+        }
+        setSelection(line, 0, line, 1);
+        removeSelectedText();
+        changed = true;
+    }
+    endUndoAction();
+
+    if (!changed) {
+        return;
+    }
+
+    if (hadSelection) {
+        const int newIndexFrom = indexFrom > 0 ? indexFrom - 1 : 0;
+        const int newIndexTo = indexTo > 0 ? indexTo - 1 : 0;
+        setSelection(lineFrom, newIndexFrom, lineTo, newIndexTo);
+    } else {
+        const int newIndex = indexFrom > 0 ? indexFrom - 1 : 0;
+        setCursorPosition(lineFrom, newIndex);
+    }
+}
+
 void CodeEditor::keyPressEvent(QKeyEvent *e) {
     // Проверяем, что редактор готов к работе
     if (!m_lexer || lines() < 0) {
         QsciScintilla::keyPressEvent(e);
             return;
+    }
+
+    if (m_currentLanguage == QLatin1String("python")) {
+        if (keyEventMatchesShortcut(e, m_uncommentShortcut)) {
+            uncommentSelectedLines();
+            e->accept();
+            return;
+        }
+        if (keyEventMatchesShortcut(e, m_commentShortcut)) {
+            commentSelectedLines();
+            e->accept();
+            return;
+        }
     }
 
     // Обработка Tab - вставляем 4 пробела
@@ -1000,52 +1135,35 @@ void CodeEditor::applyTheme(const QString &theme) {
         markerDefine(chevronDown, 31);  // Развернуто - chevron вниз (⌄)
         
         if (m_lexer) {
-            // Устанавливаем фон для всех стилей лексера через setPaper
             m_lexer->setPaper(QColor(255, 255, 255));
-            
-            // Цвета из темы "Light (Visual Studio)" из VS Code
-            // Базовые стили
-            m_lexer->setColor(QColor(0, 0, 0), QsciLexerPython::Default);  // #000000 - черный
-            
-            // Ключевые слова - синий
-            m_lexer->setColor(QColor(0, 0, 255), QsciLexerPython::Keyword);  // #0000FF
-            
-            // Строки - темно-красный (классический цвет Visual Studio)
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::SingleQuotedString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::DoubleQuotedString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::TripleSingleQuotedString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::TripleDoubleQuotedString);  // #A31515
-            
-            // F-строки - темно-красный
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::SingleQuotedFString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::DoubleQuotedFString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::TripleSingleQuotedFString);  // #A31515
-            m_lexer->setColor(QColor(163, 21, 21), QsciLexerPython::TripleDoubleQuotedFString);  // #A31515
-            
-            // Комментарии - зеленый
-            m_lexer->setColor(QColor(0, 128, 0), QsciLexerPython::Comment);  // #008000
-            m_lexer->setColor(QColor(0, 128, 0), QsciLexerPython::CommentBlock);  // #008000
-            
-            // Имена функций и методов - коричневый (классический цвет Visual Studio)
-            m_lexer->setColor(QColor(121, 94, 38), QsciLexerPython::FunctionMethodName);  // #795E26
-            
-            // Имена классов - бирюзовый
-            m_lexer->setColor(QColor(38, 127, 153), QsciLexerPython::ClassName);  // #267F99
-            
-            // Числа - зеленый (как комментарии в VS Code)
-            m_lexer->setColor(QColor(0, 128, 0), QsciLexerPython::Number);  // #008000 - зеленый
-            
-            // Операторы - черный
-            m_lexer->setColor(QColor(0, 0, 0), QsciLexerPython::Operator);  // #000000
-            
-            // Идентификаторы - черный
-            m_lexer->setColor(QColor(0, 0, 0), QsciLexerPython::Identifier);  // #000000
-            
-            // Декораторы - синий
-            m_lexer->setColor(QColor(0, 0, 255), QsciLexerPython::Decorator);  // #0000FF
-            
-            // Подсвеченные идентификаторы - бирюзовый (как классы)
-            m_lexer->setColor(QColor(38, 127, 153), QsciLexerPython::HighlightedIdentifier);  // #267F99
+            if (auto python = qobject_cast<QsciLexerPython*>(m_lexer)) {
+                python->setColor(QColor(0, 0, 0), QsciLexerPython::Default);
+                python->setColor(QColor(0, 0, 255), QsciLexerPython::Keyword);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::SingleQuotedString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::DoubleQuotedString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::TripleSingleQuotedString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::TripleDoubleQuotedString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::SingleQuotedFString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::DoubleQuotedFString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::TripleSingleQuotedFString);
+                python->setColor(QColor(163, 21, 21), QsciLexerPython::TripleDoubleQuotedFString);
+                python->setColor(QColor(0, 128, 0), QsciLexerPython::Comment);
+                python->setColor(QColor(0, 128, 0), QsciLexerPython::CommentBlock);
+                python->setColor(QColor(121, 94, 38), QsciLexerPython::FunctionMethodName);
+                python->setColor(QColor(38, 127, 153), QsciLexerPython::ClassName);
+                python->setColor(QColor(0, 128, 0), QsciLexerPython::Number);
+                python->setColor(QColor(0, 0, 0), QsciLexerPython::Operator);
+                python->setColor(QColor(0, 0, 0), QsciLexerPython::Identifier);
+                python->setColor(QColor(0, 0, 255), QsciLexerPython::Decorator);
+                python->setColor(QColor(38, 127, 153), QsciLexerPython::HighlightedIdentifier);
+            } else if (auto html = qobject_cast<QsciLexerHTML*>(m_lexer)) {
+                html->setColor(QColor(0, 0, 0), QsciLexerHTML::Default);
+                html->setColor(QColor(0, 0, 255), QsciLexerHTML::Tag);
+                html->setColor(QColor(0, 128, 0), QsciLexerHTML::HTMLComment);
+                html->setColor(QColor(163, 21, 21), QsciLexerHTML::HTMLValue);
+                html->setColor(QColor(38, 127, 153), QsciLexerHTML::Attribute);
+                html->setColor(QColor(209, 108, 9), QsciLexerHTML::Entity);
+            }
         }
         
         // Цвет маркера ошибок для светлой темы (яркий красный фон)
@@ -1092,52 +1210,35 @@ void CodeEditor::applyTheme(const QString &theme) {
         markerDefine(chevronDown, 31);  // Развернуто - chevron вниз (⌄)
         
         if (m_lexer) {
-            // Устанавливаем фон для всех стилей лексера через setPaper
             m_lexer->setPaper(QColor(30, 30, 30));
-            
-            // Цвета из темы "Dark+" из VS Code
-            // Базовые стили
-            m_lexer->setColor(QColor(212, 212, 212), QsciLexerPython::Default);  // #D4D4D4 - светло-серый
-            
-            // Ключевые слова - голубой
-            m_lexer->setColor(QColor(86, 156, 214), QsciLexerPython::Keyword);  // #569CD6
-            
-            // Строки - оранжево-коричневый
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::SingleQuotedString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::DoubleQuotedString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::TripleSingleQuotedString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::TripleDoubleQuotedString);  // #CE9178
-            
-            // F-строки - оранжево-коричневый
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::SingleQuotedFString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::DoubleQuotedFString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::TripleSingleQuotedFString);  // #CE9178
-            m_lexer->setColor(QColor(206, 145, 120), QsciLexerPython::TripleDoubleQuotedFString);  // #CE9178
-            
-            // Комментарии - зеленый
-            m_lexer->setColor(QColor(106, 153, 85), QsciLexerPython::Comment);  // #6A9955
-            m_lexer->setColor(QColor(106, 153, 85), QsciLexerPython::CommentBlock);  // #6A9955
-            
-            // Имена функций и методов - бежевый
-            m_lexer->setColor(QColor(220, 220, 170), QsciLexerPython::FunctionMethodName);  // #DCDCAA
-            
-            // Имена классов - бирюзовый
-            m_lexer->setColor(QColor(78, 201, 176), QsciLexerPython::ClassName);  // #4EC9B0
-            
-            // Числа - светло-зеленый
-            m_lexer->setColor(QColor(181, 206, 168), QsciLexerPython::Number);  // #B5CEA8
-            
-            // Операторы - светло-серый
-            m_lexer->setColor(QColor(212, 212, 212), QsciLexerPython::Operator);  // #D4D4D4
-            
-            // Идентификаторы - светло-серый
-            m_lexer->setColor(QColor(212, 212, 212), QsciLexerPython::Identifier);  // #D4D4D4
-            
-            // Декораторы - бежевый
-            m_lexer->setColor(QColor(220, 220, 170), QsciLexerPython::Decorator);  // #DCDCAA
-            
-            // Подсвеченные идентификаторы - бирюзовый (как классы)
-            m_lexer->setColor(QColor(78, 201, 176), QsciLexerPython::HighlightedIdentifier);  // #4EC9B0
+            if (auto python = qobject_cast<QsciLexerPython*>(m_lexer)) {
+                python->setColor(QColor(212, 212, 212), QsciLexerPython::Default);
+                python->setColor(QColor(86, 156, 214), QsciLexerPython::Keyword);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::SingleQuotedString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::DoubleQuotedString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::TripleSingleQuotedString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::TripleDoubleQuotedString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::SingleQuotedFString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::DoubleQuotedFString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::TripleSingleQuotedFString);
+                python->setColor(QColor(206, 145, 120), QsciLexerPython::TripleDoubleQuotedFString);
+                python->setColor(QColor(106, 153, 85), QsciLexerPython::Comment);
+                python->setColor(QColor(106, 153, 85), QsciLexerPython::CommentBlock);
+                python->setColor(QColor(220, 220, 170), QsciLexerPython::FunctionMethodName);
+                python->setColor(QColor(78, 201, 176), QsciLexerPython::ClassName);
+                python->setColor(QColor(181, 206, 168), QsciLexerPython::Number);
+                python->setColor(QColor(212, 212, 212), QsciLexerPython::Operator);
+                python->setColor(QColor(212, 212, 212), QsciLexerPython::Identifier);
+                python->setColor(QColor(220, 220, 170), QsciLexerPython::Decorator);
+                python->setColor(QColor(78, 201, 176), QsciLexerPython::HighlightedIdentifier);
+            } else if (auto html = qobject_cast<QsciLexerHTML*>(m_lexer)) {
+                html->setColor(QColor(212, 212, 212), QsciLexerHTML::Default);
+                html->setColor(QColor(86, 156, 214), QsciLexerHTML::Tag);
+                html->setColor(QColor(0, 255, 255), QsciLexerHTML::Attribute);
+                html->setColor(QColor(255, 212, 123), QsciLexerHTML::HTMLValue);
+                html->setColor(QColor(106, 153, 85), QsciLexerHTML::HTMLComment);
+                html->setColor(QColor(255, 128, 128), QsciLexerHTML::Entity);
+            }
         }
         
         // Цвет маркера ошибок для темной темы (красный фон, видимый на темном фоне)

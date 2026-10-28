@@ -1,0 +1,2 @@
+# Для генерации Word-доклада: pip install -r tools/requirements-docx.txt
+python-docx>=1.1.0

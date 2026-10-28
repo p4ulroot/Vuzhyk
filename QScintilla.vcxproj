@@ -1,0 +1,397 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{D5E6F7A8-B9C0-1234-EF01-234567890ABC}</ProjectGuid>
+    <RootNamespace>QScintilla</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
+    <QSCINTILLA_ROOT>C:\QScintilla</QSCINTILLA_ROOT>
+    <QtVersion>5.12.12</QtVersion>
+    <Keyword>QtVS_v304</Keyword>
+    <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(QtMsBuild)\qt_defaults.props" Condition="Exists('$(QtMsBuild)\qt_defaults.props')" />
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
+  </PropertyGroup>
+  <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
+  </PropertyGroup>
+  <ImportGroup Label="ExtensionSettings"></ImportGroup>
+  <ImportGroup Label="Shared"></ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="$(QtMsBuild)\Qt.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LinkIncremental>true</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\QScintilla\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\QScintilla\</IntDir>
+    <TargetExt>.dll</TargetExt>
+    <TargetName>qscintilla2_qt5d</TargetName>
+    <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\QScintilla\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\QScintilla\</IntDir>
+    <TargetExt>.dll</TargetExt>
+    <TargetName>qscintilla2_qt5</TargetName>
+    <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;QSCINTILLA_MAKE_DLL;SCINTILLA_QT;SCI_LEXER;INCLUDE_DEPRECATED_FEATURES;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(QSCINTILLA_ROOT)\src;$(QSCINTILLA_ROOT)\scintilla\include;$(QSCINTILLA_ROOT)\scintilla\lexlib;$(QSCINTILLA_ROOT)\scintilla\src;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtPrintSupport;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableSpecificWarnings>4018;4099;4267</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5PrintSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>
+      </ModuleDefinitionFile>
+      <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;QSCINTILLA_MAKE_DLL;SCINTILLA_QT;SCI_LEXER;INCLUDE_DEPRECATED_FEATURES;_WINDOWS;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>$(QSCINTILLA_ROOT)\src;$(QSCINTILLA_ROOT)\scintilla\include;$(QSCINTILLA_ROOT)\scintilla\lexlib;$(QSCINTILLA_ROOT)\scintilla\src;$(QTDIR)\include;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtCore;$(QTDIR)\include\QtPrintSupport;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <Optimization>MaxSpeed</Optimization>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <DisableSpecificWarnings>4018;4099;4267</DisableSpecificWarnings>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Qt5Core.lib;Qt5Gui.lib;Qt5Widgets.lib;Qt5PrintSupport.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <MinimumRequiredVersion>6.1</MinimumRequiredVersion>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qsciscintilla.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qsciscintillabase.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qsciabstractapis.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qsciapis.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscicommand.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscicommandset.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscidocument.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexer.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexeravs.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerbash.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerbatch.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercmake.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercoffeescript.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercpp.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercsharp.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercss.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexercustom.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerd.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerdiff.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexeredifact.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerfortran.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerfortran77.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerhtml.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexeridl.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerjava.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerjavascript.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerjson.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerlua.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexermakefile.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexermarkdown.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexermatlab.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexeroctave.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerpascal.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerperl.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerpostscript.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerpo.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerpov.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerproperties.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerpython.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerruby.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerspice.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexersql.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexertcl.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexertex.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerverilog.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexervhdl.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexerxml.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscilexeryaml.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qscimacro.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\Qsci\qsciprinter.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\ListBoxQt.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\SciAccessibility.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\SciClasses.h" />
+    <QtMoc Include="$(QSCINTILLA_ROOT)\src\ScintillaQt.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qsciscintilla.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qsciscintillabase.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qsciabstractapis.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qsciapis.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscicommand.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscicommandset.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscidocument.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexer.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexeravs.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerbash.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerbatch.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercmake.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercoffeescript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercpp.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercsharp.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercss.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexercustom.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerd.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerdiff.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexeredifact.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerfortran.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerfortran77.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerhtml.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexeridl.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerjava.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerjavascript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerjson.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerlua.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexermakefile.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexermarkdown.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexermatlab.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexeroctave.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerpascal.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerperl.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerpostscript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerpo.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerpov.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerproperties.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerpython.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerruby.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerspice.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexersql.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexertcl.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexertex.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerverilog.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexervhdl.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexerxml.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscilexeryaml.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscimacro.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscistyle.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qscistyledtext.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\InputMethod.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\ListBoxQt.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\MacPasteboardMime.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\PlatQt.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\SciAccessibility.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\SciClasses.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\ScintillaQt.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\src\qsciprinter.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexA68k.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAPDL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexASY.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAU3.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAVE.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAVS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAbaqus.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAda.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAsm.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexAsn1.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBaan.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBash.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBasic.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBatch.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBibTeX.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexBullant.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCLW.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCOBOL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCPP.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCSS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCaml.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCmake.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCoffeeScript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexConf.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCrontab.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexCsound.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexD.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexDMAP.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexDMIS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexDiff.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexECL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexEDIFACT.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexEScript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexEiffel.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexErlang.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexErrorList.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexFlagship.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexForth.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexFortran.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexGAP.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexGui4Cli.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexHTML.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexHaskell.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexHex.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexIndent.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexInno.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexJSON.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexKVIrc.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexKix.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexLaTeX.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexLisp.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexLout.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexLua.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMMIXAL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMPT.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMSSQL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMagik.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMake.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMarkdown.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMatlab.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMaxima.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMetapost.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexModula.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexMySQL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexNimrod.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexNsis.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexNull.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexOScript.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexOpal.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPB.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPLM.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPO.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPOV.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPascal.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPerl.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPowerPro.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPowerShell.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexProgress.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexProps.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexPython.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexR.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexRebol.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexRegistry.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexRuby.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexRust.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSAS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSML.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSQL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSTTXT.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexScriptol.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSmalltalk.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSorcus.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSpecman.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexSpice.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexStata.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTACL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTADS3.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTAL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTCL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTCMD.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTeX.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexTxt2tags.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexVB.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexVHDL.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexVerilog.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexVisualProlog.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexers\LexYAML.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\Accessor.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\CharacterCategory.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\CharacterSet.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\DefaultLexer.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\LexerBase.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\LexerModule.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\LexerNoExceptions.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\LexerSimple.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\PropSetSimple.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\StyleContext.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\lexlib\WordList.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\AutoComplete.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\CallTip.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\CaseConvert.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\CaseFolder.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Catalogue.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\CellBuffer.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\CharClassify.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\ContractionState.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\DBCS.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Decoration.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Document.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\EditModel.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Editor.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\EditView.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\ExternalLexer.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Indicator.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\KeyMap.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\LineMarker.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\MarginView.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\PerLine.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\PositionCache.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\RESearch.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\RunStyles.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\ScintillaBase.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Selection.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\Style.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\UniConversion.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\ViewStyle.cpp" />
+    <ClCompile Include="$(QSCINTILLA_ROOT)\scintilla\src\XPM.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Import Project="$(QtMsBuild)\qt.targets" Condition="Exists('$(QtMsBuild)\qt.targets')" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

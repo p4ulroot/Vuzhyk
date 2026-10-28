@@ -16,6 +16,8 @@
     <file>icons/light-theme/run-in-terminal.svg</file>
     <file>icons/light-theme/arrow-right.svg</file>
     <file>icons/light-theme/arrow-down.svg</file>
+    <file>icons/light-theme/up-arrow.svg</file>
+    <file>icons/light-theme/key.svg</file>
     <file>icons/logo/vuzhyk.ico</file>
     <file>icons/logo/py.ico</file>
     <file>icons/window-controls/window-minimize.svg</file>
@@ -28,6 +30,9 @@
     <file>icons/window-controls/window-close-hover.svg</file>
     <file>icons/window-controls/settings-gear.svg</file>
     <file>icons/window-controls/settings-gear-hover.svg</file>
+  </qresource>
+  <qresource prefix="/tasks">
+    <file alias="turtle_task_runner.py">src/tasks/turtle_task_runner.py</file>
   </qresource>
 </RCC>
 

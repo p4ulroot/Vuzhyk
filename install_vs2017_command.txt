@@ -1,0 +1,22 @@
+Команда для установки Visual Studio 2017 Build Tools через Chocolatey:
+
+choco install visualstudio2017buildtools visualstudio2017-workload-vctools -y
+
+ВАЖНО: Запустите PowerShell от имени администратора!
+
+Полная последовательность:
+1. Откройте PowerShell от имени администратора (правой кнопкой → "Запуск от имени администратора")
+2. Выполните команду:
+   choco install visualstudio2017buildtools visualstudio2017-workload-vctools -y
+3. Дождитесь завершения установки (10-30 минут, несколько GB)
+
+После установки пересоберите QScintilla:
+   build_qscintilla.bat
+
+
+
+
+
+
+
+

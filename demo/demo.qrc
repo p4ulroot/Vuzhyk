@@ -1,0 +1,33 @@
+<RCC>
+  <qresource prefix="/icons">
+    <file alias="icons/light-theme/file-new.svg">../icons/light-theme/file-new.svg</file>
+    <file alias="icons/light-theme/file-open.svg">../icons/light-theme/file-open.svg</file>
+    <file alias="icons/light-theme/file-save.svg">../icons/light-theme/file-save.svg</file>
+    <file alias="icons/light-theme/file-save-all.svg">../icons/light-theme/file-save-all.svg</file>
+    <file alias="icons/light-theme/cut.svg">../icons/light-theme/cut.svg</file>
+    <file alias="icons/light-theme/copy.svg">../icons/light-theme/copy.svg</file>
+    <file alias="icons/light-theme/paste-clipboard.svg">../icons/light-theme/paste-clipboard.svg</file>
+    <file alias="icons/light-theme/undo.svg">../icons/light-theme/undo.svg</file>
+    <file alias="icons/light-theme/redo.svg">../icons/light-theme/redo.svg</file>
+    <file alias="icons/light-theme/play.svg">../icons/light-theme/play.svg</file>
+    <file alias="icons/light-theme/up-arrow.svg">../icons/light-theme/up-arrow.svg</file>
+    <file alias="icons/light-theme/stop.svg">../icons/light-theme/stop.svg</file>
+    <file alias="icons/light-theme/bug.svg">../icons/light-theme/bug.svg</file>
+    <file alias="icons/light-theme/next-bug.svg">../icons/light-theme/next-bug.svg</file>
+    <file alias="icons/light-theme/run-in-terminal.svg">../icons/light-theme/run-in-terminal.svg</file>
+    <file alias="icons/light-theme/arrow-right.svg">../icons/light-theme/arrow-right.svg</file>
+    <file alias="icons/logo/vuzhyk.ico">../icons/logo/vuzhyk.ico</file>
+    <file alias="icons/window-controls/window-minimize.svg">../icons/window-controls/window-minimize.svg</file>
+    <file alias="icons/window-controls/window-maximize.svg">../icons/window-controls/window-maximize.svg</file>
+    <file alias="icons/window-controls/window-restore.svg">../icons/window-controls/window-restore.svg</file>
+    <file alias="icons/window-controls/window-close.svg">../icons/window-controls/window-close.svg</file>
+    <file alias="icons/window-controls/window-minimize-hover.svg">../icons/window-controls/window-minimize-hover.svg</file>
+    <file alias="icons/window-controls/window-maximize-hover.svg">../icons/window-controls/window-maximize-hover.svg</file>
+    <file alias="icons/window-controls/window-restore-hover.svg">../icons/window-controls/window-restore-hover.svg</file>
+    <file alias="icons/window-controls/window-close-hover.svg">../icons/window-controls/window-close-hover.svg</file>
+    <file alias="icons/window-controls/settings-gear.svg">../icons/window-controls/settings-gear.svg</file>
+  </qresource>
+  <qresource prefix="/cursors">
+    <file alias="Pointer.cur">Bibata-Modern-Classic-Large-Windows/Pointer.cur</file>
+  </qresource>
+</RCC>

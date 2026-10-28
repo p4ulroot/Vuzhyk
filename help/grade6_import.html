@@ -1,0 +1,19 @@
+<h1>4.1. Подключение модуля с командами управления исполнителем Черепаха</h1>
+<h2>Вариант 1</h2>
+<p><code>import turtle</code> — подключить окно без координатной сетки</p>
+<p><code>import turtlexy</code> — подключить окно с координатной сеткой</p>
+<p>Каждая команда управления Черепахой записывается после ключевого слова <code>turtle</code> и отделяется от него точкой.</p>
+<pre>import turtlexy
+turtle.shape('turtle')
+turtle.left(90)
+turtle.forward(100)
+turtle.left(90)</pre>
+<h2>Вариант 2</h2>
+<p><code>from turtle import *</code> — подключить окно без координатной сетки</p>
+<p><code>from turtlexy import *</code> — подключить окно с координатной сеткой</p>
+<p>Команды записываются без ключевого слова <code>turtle</code>.</p>
+<pre>from turtlexy import *
+shape('turtle')
+left(90)
+forward(100)
+left(90)</pre>

@@ -3,6 +3,7 @@ build*/
 build-*/
 x64/
 x86/
+.qt/
 *.vcxproj.user
 *.vcxproj.user.*
 
@@ -27,6 +28,10 @@ Makefile
 *.exp
 *.tlog
 *.lastbuildstate
+
+# Runtime tools intentionally versioned with the product
+!tools/zip/7za.exe
+!tools/pdf/SumatraPDF-*.exe
 
 # Qt
 *_autogen/
@@ -64,9 +69,21 @@ build/
 
 # Distribution
 dist/
+installer/output/
 *.7z
 *.zip
 *.tar.gz
+
+# Syncthing local metadata
+/.stfolder/
+/.stignore
+
+# Local archives, inventories and build logs; not product sources
+/OldVuzhyk/
+/opencode-dev/
+/_new_files.txt
+/_old_files.txt
+/QSbuildlog.txt
 
 # Logs
 *.log
@@ -88,4 +105,9 @@ install_manifest.txt
 # Backup files
 *.bak
 *.backup
+
+# Local IDE workspace
+Vuzhyk.code-workspace
+/extensions/
+/python/
 

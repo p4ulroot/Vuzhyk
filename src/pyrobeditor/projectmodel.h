@@ -15,6 +15,8 @@ public:
 	enum WallSide { Left = 0, Right = 1, Top = 2, Bottom = 3 };
 
 	struct VariantState {
+		int rows = 0;
+		int cols = 0;
 		QVector<QVector<CellType>> cells;
 		QVector<QVector<bool>> wallRight;
 		QVector<QVector<bool>> wallBottom;

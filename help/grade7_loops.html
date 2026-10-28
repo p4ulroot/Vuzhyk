@@ -1,0 +1,46 @@
+<h1>5.2. Циклы</h1>
+<p><strong>Алгоритмическая конструкция повторение (цикл)</strong> задаёт последовательность действий, выполняемых многократно. Эту последовательность называют <strong>телом цикла</strong>.</p>
+<h2>Цикл с параметром (for)</h2>
+<p>Количество повторов известно заранее и зависит от начального и конечного значений параметра (счётчика).</p>
+<p>В Python:</p>
+<pre>for i in range(N1, N2):
+    команды</pre>
+<p>Заголовок читают так: «Для переменной i в диапазоне от N1 до N2 делай…». Значение N2 в <code>range</code> <strong>не входит</strong> в диапазон.</p>
+<table>
+<tr><th>Запись</th><th>Значения i</th></tr>
+<tr><td>for i in range(N):</td><td>0, 1, …, N−1 (N раз)</td></tr>
+<tr><td>for i in range(N1, N2):</td><td>N1, N1+1, …, N2−1</td></tr>
+<tr><td>for i in range(N1, N2, h):</td><td>от N1 с шагом h, пока i &lt; N2</td></tr>
+</table>
+<pre>for i in range(5, 0, -1):
+    print(i)
+for i in range(-20, 30, 10):
+    print(i)
+for i in range(1, 100, 2):
+    print(i)</pre>
+<p>Вложенные циклы: внутренний выполняется полностью на каждом шаге внешнего.</p>
+<pre>from pyrob.api import *
+
+@task
+def prim_13():
+    for i in range(10):
+        fill_cell()
+        move_right()
+
+run_tasks()</pre>
+<h2>Цикл с предусловием (while)</h2>
+<p>Тело повторяется, <strong>пока условие истинно</strong>. Число повторов заранее может быть неизвестно (например, «пока справа нет стены»).</p>
+<pre>while условие:
+    команды</pre>
+<p>Заголовок читают: «Пока верно условие, делай…».</p>
+<pre>from pyrob.api import *
+
+@task
+def prim_while():
+    while not wall_right():
+        fill_cell()
+        move_right()
+    fill_cell()
+
+run_tasks()</pre>
+<p>Для Робота часто используют проверки стен: <code>wall_right()</code>, <code>wall_left()</code>, <code>wall_up()</code>, <code>wall_down()</code> и отрицание <code>not</code>.</p>

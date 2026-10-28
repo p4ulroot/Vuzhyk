@@ -18,7 +18,7 @@ class BrowserWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit BrowserWindow(QWidget *parent = nullptr);
+    explicit BrowserWindow(const QString &initialPath = QString(), QWidget *parent = nullptr);
     ~BrowserWindow();
 
 private slots:
@@ -36,6 +36,7 @@ private:
     void setupUI();
     void setupToolbar();
     void setupWebView();
+    void loadInitialPath();
 
     QWebEngineView *m_webView;
     QLineEdit *m_urlLineEdit;
@@ -45,6 +46,7 @@ private:
     QPushButton *m_goButton;
     QProgressBar *m_progressBar;
     QToolBar *m_toolbar;
+    QString m_initialPath;
 };
 
 #endif // BROWSERWINDOW_H

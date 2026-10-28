@@ -1,17 +1,22 @@
 #include <QApplication>
+#include <QCoreApplication>
 #include <QIcon>
 #include "BrowserWindow.h"
 
 int main(int argc, char *argv[])
 {
-    // В Qt 5.12 QWebEngine инициализируется автоматически при создании QWebEngineView
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-    
+
     QApplication app(argc, argv);
     QApplication::setApplicationName("Embedded Browser Extension");
     QApplication::setOrganizationName("Vuzhyk");
 
-    BrowserWindow window;
+    QString initialPath;
+    if (argc > 1) {
+        initialPath = QString::fromLocal8Bit(argv[1]);
+    }
+
+    BrowserWindow window(initialPath);
     window.show();
 
     return app.exec();

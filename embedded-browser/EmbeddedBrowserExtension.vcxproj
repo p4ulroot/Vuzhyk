@@ -11,11 +11,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <VCProjectVersion>16.0</VCProjectVersion>
+    <VCProjectVersion>15.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{C4D5E6F7-A8B9-0123-DEF0-234567890123}</ProjectGuid>
     <RootNamespace>EmbeddedBrowserExtension</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.19041.0</WindowsTargetPlatformVersion>
     <QtVersion>5.12.12</QtVersion>
     <Keyword>QtVS_v304</Keyword>
     <QtMsBuild Condition="'$(QtMsBuild)'=='' OR !Exists('$(QtMsBuild)\qt.targets')">$(MSBuildProjectDirectory)\..\QtMsBuild</QtMsBuild>
@@ -24,14 +24,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v142</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
     <UseOfMfc>false</UseOfMfc>
@@ -39,8 +39,12 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="$(QtMsBuild)\qt_defaults.props" Condition="Exists('$(QtMsBuild)\qt_defaults.props')" />
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
   </PropertyGroup>
   <PropertyGroup Label="QtSettings" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <QtInstall>C:\Qt\Qt5.12.12\5.12.12\msvc2017_64</QtInstall>
+    <QtVarsOutputDir>$(SolutionDir).qt\$(MSBuildProjectName)\$(Configuration)_$(Platform)</QtVarsOutputDir>
   </PropertyGroup>
   <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') OR !Exists('$(QtMsBuild)\Qt.props')">
     <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
@@ -58,16 +62,16 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\EmbeddedBrowserExtension\</OutDir>
-    <IntDir>$(Platform)\$(Configuration)\EmbeddedBrowserExtension\</IntDir>
+    <OutDir>$(SolutionDir)extensions\EmbeddedBrowserExtension\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\EmbeddedBrowserExtension\Intermediate\</IntDir>
     <TargetExt>.exe</TargetExt>
     <TargetName>EmbeddedBrowserExtension</TargetName>
     <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\EmbeddedBrowserExtension\</OutDir>
-    <IntDir>$(SolutionDir)$(Platform)\$(Configuration)\EmbeddedBrowserExtension_intermediate\</IntDir>
+    <OutDir>$(SolutionDir)extensions\EmbeddedBrowserExtension\</OutDir>
+    <IntDir>$(Platform)\$(Configuration)\EmbeddedBrowserExtension\Intermediate\</IntDir>
     <TargetExt>.exe</TargetExt>
     <TargetName>EmbeddedBrowserExtension</TargetName>
     <WindowsTargetPlatformMinVersion>6.1</WindowsTargetPlatformMinVersion>
@@ -164,20 +168,31 @@
       <QtDlls Include="$(QTDIR)\bin\Qt5WebEngineWidgetsd.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebEngineWidgetsd.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5WebEngineCored.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebEngineCored.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Quickd.dll" Condition="Exists('$(QTDIR)\bin\Qt5Quickd.dll')" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5QuickWidgetsd.dll" Condition="Exists('$(QTDIR)\bin\Qt5QuickWidgetsd.dll')" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5WebChanneld.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebChanneld.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Qmld.dll" Condition="Exists('$(QTDIR)\bin\Qt5Qmld.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Networkd.dll" Condition="Exists('$(QTDIR)\bin\Qt5Networkd.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Positioningd.dll" Condition="Exists('$(QTDIR)\bin\Qt5Positioningd.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5PrintSupportd.dll" Condition="Exists('$(QTDIR)\bin\Qt5PrintSupportd.dll')" />
     </ItemGroup>
     <Copy SourceFiles="@(QtDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(QTDIR)\bin\QtWebEngineProcessd.exe" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\bin\QtWebEngineProcessd.exe')" />
+    <Copy SourceFiles="$(QTDIR)\bin\QtWebEngineProcess.exe" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\bin\QtWebEngineProcess.exe')" />
     <MakeDir Directories="$(OutDir)platforms" />
     <Copy SourceFiles="$(QTDIR)\plugins\platforms\qwindowsd.dll" DestinationFolder="$(OutDir)platforms" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\platforms\qwindowsd.dll')" />
     <Copy SourceFiles="$(QTDIR)\plugins\platforms\qwindows.dll" DestinationFolder="$(OutDir)platforms" SkipUnchangedFiles="true" Condition="!Exists('$(QTDIR)\plugins\platforms\qwindowsd.dll') AND Exists('$(QTDIR)\plugins\platforms\qwindows.dll')" />
-    <!-- Копируем QtWebEngine плагины -->
-    <MakeDir Directories="$(OutDir)resources" />
-    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\resources\*&quot; &quot;$(OutDir)resources\&quot;" Condition="Exists('$(QTDIR)\resources')" IgnoreExitCode="true" />
-    <MakeDir Directories="$(OutDir)translations" />
+    <!-- Qt WebEngine ищет файлы из resources рядом со своим exe (в корне папки расширения) -->
+    <Copy SourceFiles="$(QTDIR)\resources\icudtl.dat" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\icudtl.dat')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_devtools_resources.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_devtools_resources.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources_100p.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources_100p.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources_200p.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources_200p.pak')" />
+    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\resources\*&quot; &quot;$(OutDir)\&quot;" Condition="Exists('$(QTDIR)\resources')" IgnoreExitCode="true" />
+    <!-- Локали -->
+    <MakeDir Directories="$(OutDir)translations\qtwebengine_locales" />
     <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\translations\qtwebengine_locales\*&quot; &quot;$(OutDir)translations\qtwebengine_locales\&quot;" Condition="Exists('$(QTDIR)\translations\qtwebengine_locales')" IgnoreExitCode="true" />
+    <MakeDir Directories="$(OutDir)qtwebengine_locales" />
+    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\translations\qtwebengine_locales\*&quot; &quot;$(OutDir)qtwebengine_locales\&quot;" Condition="Exists('$(QTDIR)\translations\qtwebengine_locales')" IgnoreExitCode="true" />
   </Target>
   <Target Name="CopyQtDllsRelease" AfterTargets="Build" Condition="'$(Configuration)'=='Release'">
     <ItemGroup>
@@ -187,19 +202,29 @@
       <QtDlls Include="$(QTDIR)\bin\Qt5WebEngineWidgets.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebEngineWidgets.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5WebEngineCore.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebEngineCore.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Quick.dll" Condition="Exists('$(QTDIR)\bin\Qt5Quick.dll')" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5QuickWidgets.dll" Condition="Exists('$(QTDIR)\bin\Qt5QuickWidgets.dll')" />
+      <QtDlls Include="$(QTDIR)\bin\Qt5WebChannel.dll" Condition="Exists('$(QTDIR)\bin\Qt5WebChannel.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Qml.dll" Condition="Exists('$(QTDIR)\bin\Qt5Qml.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Network.dll" Condition="Exists('$(QTDIR)\bin\Qt5Network.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5Positioning.dll" Condition="Exists('$(QTDIR)\bin\Qt5Positioning.dll')" />
       <QtDlls Include="$(QTDIR)\bin\Qt5PrintSupport.dll" Condition="Exists('$(QTDIR)\bin\Qt5PrintSupport.dll')" />
     </ItemGroup>
     <Copy SourceFiles="@(QtDlls)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(QTDIR)\bin\QtWebEngineProcess.exe" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\bin\QtWebEngineProcess.exe')" />
     <MakeDir Directories="$(OutDir)platforms" />
     <Copy SourceFiles="$(QTDIR)\plugins\platforms\qwindows.dll" DestinationFolder="$(OutDir)platforms" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\plugins\platforms\qwindows.dll')" />
-    <!-- Копируем QtWebEngine плагины -->
-    <MakeDir Directories="$(OutDir)resources" />
-    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\resources\*&quot; &quot;$(OutDir)resources\&quot;" Condition="Exists('$(QTDIR)\resources')" IgnoreExitCode="true" />
-    <MakeDir Directories="$(OutDir)translations" />
+    <!-- Qt WebEngine ищет файлы из resources рядом со своим exe (в корне папки расширения) -->
+    <Copy SourceFiles="$(QTDIR)\resources\icudtl.dat" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\icudtl.dat')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_devtools_resources.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_devtools_resources.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources_100p.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources_100p.pak')" />
+    <Copy SourceFiles="$(QTDIR)\resources\qtwebengine_resources_200p.pak" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(QTDIR)\resources\qtwebengine_resources_200p.pak')" />
+    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\resources\*&quot; &quot;$(OutDir)\&quot;" Condition="Exists('$(QTDIR)\resources')" IgnoreExitCode="true" />
+    <!-- Локали -->
+    <MakeDir Directories="$(OutDir)translations\qtwebengine_locales" />
     <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\translations\qtwebengine_locales\*&quot; &quot;$(OutDir)translations\qtwebengine_locales\&quot;" Condition="Exists('$(QTDIR)\translations\qtwebengine_locales')" IgnoreExitCode="true" />
+    <MakeDir Directories="$(OutDir)qtwebengine_locales" />
+    <Exec Command="xcopy /E /I /Y &quot;$(QTDIR)\translations\qtwebengine_locales\*&quot; &quot;$(OutDir)qtwebengine_locales\&quot;" Condition="Exists('$(QTDIR)\translations\qtwebengine_locales')" IgnoreExitCode="true" />
   </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

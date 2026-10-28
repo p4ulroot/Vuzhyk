@@ -17,19 +17,9 @@ private:
     void initializeAnimation();
     void startOpenAnimation();
     void startCloseAnimation();
+    void applyClip(int visibleHeight);
 
     QVariantAnimation *m_animation { nullptr };
     bool m_blockClose { false };
     bool m_closing { false };
 };
-
-
-
-
-
-
-
-
-
-
-

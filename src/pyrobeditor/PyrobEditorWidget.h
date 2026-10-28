@@ -47,7 +47,7 @@ private:
 	void createToolbar();
 	void retranslateUi();
 	QString trKey(const char *key) const;
-	QString defaultTasksDirectory() const;
+	QString defaultTasksDirectory(bool forSaveOrExport = false) const;
 	bool maybeSave();
 	bool saveToFile(const QString &path);
 	bool loadFromFile(const QString &path);
